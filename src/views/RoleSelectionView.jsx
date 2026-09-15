@@ -119,7 +119,7 @@ export default function RoleSelectionView() {
 
           {/* Actor 2: Student / Innovator */}
           <div
-            onClick={() => handleSelectRole('student', '/student/explorer')}
+            onClick={() => handleSelectRole('student', '/student/dashboard')}
             className="role-card group cursor-pointer p-5 sm:p-6 rounded-2xl bg-white border border-outline-variant/70 shadow-2xs hover:border-brand-violet/70 hover:shadow-md hover:-translate-y-1 transition-all duration-250 ease-out flex flex-col justify-between min-h-[190px] relative overflow-hidden"
           >
             <div>

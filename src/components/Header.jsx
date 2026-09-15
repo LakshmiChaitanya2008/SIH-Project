@@ -14,6 +14,7 @@ export default function Header() {
 
   const activeRoute = location.pathname
   const isMentor = userRole === 'mentor' || userRole === 'admin' || activeRoute.startsWith('/mentor') || activeRoute.startsWith('/validation') || activeRoute.startsWith('/challenge') || activeRoute.startsWith('/university')
+  const isStudent = userRole === 'student' || activeRoute.startsWith('/student')
   const authed = isAuthenticated
   const user = userProfile || { name: 'Citizen User' }
   const unreadCount = notifications ? notifications.filter(n => n.unread).length : 0
@@ -71,11 +72,11 @@ export default function Header() {
         <div className="flex items-center gap-3 md:gap-4">
           <a
             className="flex items-center cursor-pointer group py-1 bg-transparent p-0 border-none shadow-none"
-            onClick={() => handleNav(isMentor ? '/mentor/dashboard' : authed ? '/citizen/home' : '/')}
+            onClick={() => handleNav(isMentor ? '/mentor/dashboard' : isStudent ? '/student/dashboard' : authed ? '/citizen/home' : '/')}
           >
             {logo}
           </a>
-          {isMentor && <div className="h-4 w-px bg-outline-variant/50 hidden sm:block" />}
+          {(isMentor || isStudent) && <div className="h-4 w-px bg-outline-variant/50 hidden sm:block" />}
         </div>
 
         {isMentor ? (
@@ -149,6 +150,92 @@ export default function Header() {
                     </div>
                     <a className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-on-surface-variant hover:text-brand-violet hover:bg-surface-container-low rounded-xl cursor-pointer" onClick={() => handleNav('/university/profile')}>
                       <span className="material-symbols-outlined text-base">school</span> University Profile
+                    </a>
+                    <div className="border-t border-outline-variant/40 pt-1">
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-error hover:bg-error/10 rounded-xl cursor-pointer" onClick={handleSignOut}>
+                        <span className="material-symbols-outlined text-base">logout</span> {t('nav.logout')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : isStudent ? (
+          <>
+            {/* Student Innovator Navigation Bar */}
+            <nav className="hidden md:flex items-center gap-6">
+              {[
+                { path: '/student/dashboard', label: 'Dashboard' },
+                { path: '/student/explorer', label: 'Explore Challenges' },
+                { path: '/student/team-formation', label: 'My Teams' },
+                { path: '/student/proposals', label: 'My Proposals' },
+                { path: '/university/projects', label: 'My Projects' },
+                { path: '/student/profile', label: 'Profile' },
+              ].map(item => (
+                <a
+                  key={item.path}
+                  className={`cursor-pointer font-label-md text-sm font-semibold transition-colors duration-200 py-1 relative ${
+                    activeRoute === item.path
+                      ? 'text-brand-violet font-bold border-b-2 border-brand-violet'
+                      : 'text-on-surface-variant hover:text-brand-indigo'
+                  }`}
+                  onClick={() => handleNav(item.path)}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="hidden md:flex items-center gap-3 relative">
+              <LanguageSelector />
+
+              <div className="relative" ref={notifRef}>
+                <button
+                  className="w-9 h-9 rounded-full bg-surface-container-low hover:bg-surface-container text-brand-indigo flex items-center justify-center transition-colors relative cursor-pointer"
+                  onClick={() => setNotifOpen(!notifOpen)}
+                >
+                  <span className="material-symbols-outlined text-lg">notifications</span>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-violet" />
+                </button>
+                {notifOpen && (
+                  <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl border border-outline-variant/70 shadow-xl p-4 z-50 space-y-3">
+                    <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
+                      <span className="font-bold text-brand-indigo text-xs uppercase tracking-wider">{t('nav.notifications')}</span>
+                      <button className="text-xs font-bold text-brand-violet hover:underline" onClick={() => handleNav('/student/proposals')}>View All</button>
+                    </div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      <div className="p-2.5 rounded-xl bg-brand-violet/5 border border-brand-violet/20 cursor-pointer hover:bg-white transition-all space-y-0.5" onClick={() => handleNav('/student/proposals')}>
+                        <div className="flex items-center justify-between text-xs font-bold text-brand-indigo">
+                          <span>Faculty Review Updated</span>
+                          <span className="text-[10px] text-on-surface-variant font-normal">2h ago</span>
+                        </div>
+                        <p className="text-[11px] text-on-surface-variant leading-snug">Dr. Anjali Kumar added review notes for your Bio-Char filtration proposal.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={profileRef}>
+                <button
+                  className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant/60 transition-all cursor-pointer"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                >
+                  <div className="w-7 h-7 rounded-full bg-brand-violet text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                    R
+                  </div>
+                  <span className="font-semibold text-xs text-brand-indigo max-w-[110px] truncate">Rahul Sharma</span>
+                  <span className="material-symbols-outlined text-base text-on-surface-variant">expand_more</span>
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl border border-outline-variant/70 shadow-xl p-2 z-50 space-y-1">
+                    <div className="p-3 border-b border-outline-variant/40">
+                      <div className="font-bold text-brand-indigo text-sm">Rahul Sharma</div>
+                      <div className="text-[11px] text-on-surface-variant">Ranchi University Innovator</div>
+                    </div>
+                    <a className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-on-surface-variant hover:text-brand-violet hover:bg-surface-container-low rounded-xl cursor-pointer" onClick={() => handleNav('/student/profile')}>
+                      <span className="material-symbols-outlined text-base">person</span> Innovation Profile
                     </a>
                     <div className="border-t border-outline-variant/40 pt-1">
                       <button className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-error hover:bg-error/10 rounded-xl cursor-pointer" onClick={handleSignOut}>

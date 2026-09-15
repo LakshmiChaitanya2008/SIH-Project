@@ -46,6 +46,9 @@ import CompletedSolutionView from './views/CompletedSolutionView'
 import UniversityAccessView from './views/UniversityAccessView'
 import StudentExplorerView from './views/StudentExplorerView'
 import PartnerPlaceholderView from './views/PartnerPlaceholderView'
+import StudentDashboardView from './views/StudentDashboardView'
+import StudentChallengeDetailView from './views/StudentChallengeDetailView'
+import StudentProfileView from './views/StudentProfileView'
 
 export default function App() {
   return (
@@ -98,10 +101,13 @@ export default function App() {
               <Route path="/challenge/formation" element={<ProtectedRoute requiredRole="mentor"><ChallengeFormationView /></ProtectedRoute>} />
               <Route path="/challenge/published" element={<ProtectedRoute requiredRole="mentor"><ChallengePublishedView /></ProtectedRoute>} />
               
-              {/* Published Challenges & Student Explorer */}
+              {/* Student Innovation Portal Routes */}
+              <Route path="/student/dashboard" element={<ProtectedRoute><StudentDashboardView /></ProtectedRoute>} />
               <Route path="/challenges" element={<PublishedChallengesView />} />
               <Route path="/explore-challenges" element={<PublishedChallengesView />} />
               <Route path="/student/explorer" element={<StudentExplorerView />} />
+              <Route path="/student/challenge/:id" element={<ProtectedRoute><StudentChallengeDetailView /></ProtectedRoute>} />
+              <Route path="/student/profile" element={<ProtectedRoute><StudentProfileView /></ProtectedRoute>} />
 
               {/* Student Proposal & Project Routes */}
               <Route path="/student/proposals" element={<ProtectedRoute><StudentProposalsView /></ProtectedRoute>} />
