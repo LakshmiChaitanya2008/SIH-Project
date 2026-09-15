@@ -1,0 +1,393 @@
+/* SamadhanSetu Primary Design System & Tokens */
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+:root {
+  /* Brand Core Colors */
+  --brand-indigo: #24285B;
+  --brand-violet: #3F3A8A;
+  --brand-teal: #2C8C86;
+  --brand-warm-white: #FAFAF8;
+  --brand-lavender-subtle: #F1F0FA;
+
+  /* Material Palette Tokens */
+  --color-primary: #24285B;
+  --color-primary-container: #3F3A8A;
+  --color-on-primary-container: #EDEBFA;
+  --color-secondary: #3F3A8A;
+  --color-secondary-container: #3F3A8A;
+  --color-on-secondary-container: #FAFAF8;
+  --color-tertiary: #2C8C86;
+  --color-tertiary-container: #2C8C86;
+  --color-on-tertiary-container: #FAFAF8;
+  
+  --color-background: #FAFAF8;
+  --color-on-background: #24285B;
+
+  --color-surface: #FAFAF8;
+  --color-surface-bright: #FAFAF8;
+  --color-surface-dim: #E5E4F0;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #F1F0FA;
+  --color-surface-container: #EBE9F5;
+  --color-surface-container-high: #E5E3F0;
+  --color-surface-container-highest: #DFDCEB;
+  --color-surface-variant: #DFDCEB;
+  --color-on-surface: #24285B;
+  --color-on-surface-variant: #4A4D73;
+
+  --color-outline: #787583;
+  --color-outline-variant: #c8c4d3;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
+  /* Typography */
+  --font-display: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Material Symbols Utility */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Global Reset & Base */
+*, ::before, ::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  height: auto;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-container-low);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
+}
+
+/* Hero Title Clamp */
+.hero-title-responsive {
+  font-size: clamp(38px, 4.5vw, 68px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+/* Container Max Utilities */
+.max-w-container-max {
+  max-width: 1280px;
+}
+
+/* Keyframes Animations */
+@keyframes maskRevealUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradientShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floatNetwork {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(0.5deg);
+  }
+}
+
+@keyframes dashFlow {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes nodeGlowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+    filter: drop-shadow(0 0 2px rgba(91, 63, 214, 0.4));
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(21, 155, 140, 0.8));
+  }
+}
+
+@keyframes softPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(91, 63, 214, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 20px 6px rgba(91, 63, 214, 0.35);
+  }
+}
+
+@keyframes signalRipple {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+.animate-signal-ripple {
+  animation: signalRipple 1.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-left {
+  opacity: 0;
+  animation: slideInFromLeft 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes headingSlideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-heading-slide-left {
+  opacity: 0;
+  animation: headingSlideInFromLeft 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stagger-delay-1 {
+  animation-delay: 130ms;
+}
+
+@keyframes journeyFlow {
+  0% {
+    left: 0%;
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0.2;
+  }
+}
+
+/* Mask & Text Reveal Utilities */
+.overflow-mask {
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.reveal-mask-item {
+  transform: translateY(110%);
+  opacity: 0;
+  animation: maskRevealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.text-gradient-shimmer {
+  background: linear-gradient(120deg, #352C85 0%, #5B3FD6 35%, #159B8C 70%, #5B3FD6 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShimmer 7s ease infinite;
+}
+
+/* Animation Helper Classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stagger-1 { animation-delay: 80ms; }
+.stagger-2 { animation-delay: 180ms; }
+.stagger-3 { animation-delay: 280ms; }
+.stagger-4 { animation-delay: 380ms; }
+.stagger-5 { animation-delay: 480ms; }
+.stagger-6 { animation-delay: 580ms; }
+
+.animate-float-network {
+  animation: floatNetwork 10s ease-in-out infinite;
+}
+
+.animate-dash-flow {
+  stroke-dasharray: 6 6;
+  animation: dashFlow 12s linear infinite;
+}
+
+.animate-node-glow {
+  animation: nodeGlowPulse 4s ease-in-out infinite;
+}
+
+.animate-soft-pulse {
+  animation: softPulse 3.5s ease-in-out infinite;
+}
+
+/* Scroll Reveal - Visible by default for natural full-page vertical scrolling */
+.reveal-on-scroll {
+  opacity: 1;
+  transform: none;
+}
+
+/* Nav Link Hover Underline Indicator */
+.nav-link-indicator {
+  position: relative;
+}
+
+.nav-link-indicator::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2.5px;
+  background: linear-gradient(90deg, #5B3FD6, #159B8C);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link-indicator:hover::after,
+.nav-link-indicator.active::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Interactive Card Specialization */
+.domain-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.domain-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+.domain-card-health:hover::before {
+  background: linear-gradient(90deg, #5B3FD6, #352C85);
+}
+
+.domain-card-agri:hover::before {
+  background: linear-gradient(90deg, #159B8C, #86f6e4);
+}
+
+.domain-card-edu:hover::before {
+  background: linear-gradient(90deg, #352C85, #5B3FD6);
+}
+
+/* Accessibility: Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .reveal-mask-item,
+  .animate-slide-left {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

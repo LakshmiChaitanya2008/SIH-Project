@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1e106f;
+  --color-primary-container: #352c85;
+  --color-on-primary-container: #a199f8;
+  --color-secondary: #5b3fd6;
+  --color-secondary-container: #745bf0;
+  --color-on-secondary-container: #fffbff;
+  --color-tertiary: #002a25;
+  --color-tertiary-container: #00423b;
+  --color-on-tertiary-container: #3fb5a5;
+  --color-tertiary-fixed: #86f6e4;
+  --color-tertiary-fixed-dim: #68d9c8;
+  --color-surface: #fcf8ff;
+  --color-surface-bright: #fcf8ff;
+  --color-surface-dim: #dcd8e1;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f2fa;
+  --color-surface-container: #f0ecf5;
+  --color-surface-container-high: #ebe6ef;
+  --color-surface-container-highest: #e5e1e9;
+  --color-surface-variant: #e5e1e9;
+  --color-background: #fcf8ff;
+  --color-on-background: #1c1b21;
+  --color-on-surface: #1c1b21;
+  --color-on-surface-variant: #474551;
+  --color-outline: #787583;
+  --color-outline-variant: #c8c4d3;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-brand-indigo: #352C85;
+  --color-brand-violet: #5B3FD6;
+  --color-brand-teal: #159B8C;
+  --color-brand-warm-white: #fcf8ff;
+
+  --radius-default: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  --font-display-lg: 'Hanken Grotesk', sans-serif;
+  --font-headline-md: 'Hanken Grotesk', sans-serif;
+  --font-headline-sm: 'Hanken Grotesk', sans-serif;
+  --font-body-lg: 'Inter', sans-serif;
+  --font-body-md: 'Inter', sans-serif;
+  --font-body-sm: 'Inter', sans-serif;
+  --font-label-md: 'Inter', sans-serif;
+  --font-label-sm: 'Inter', sans-serif;
+}
+
+/* --- Premium Animation Keyframes --- */
+@keyframes successIconEntry {
+  0% { opacity: 0; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes timelineProgress {
+  0% { width: 0%; }
+  100% { width: 27%; }
+}
+
+@keyframes svgCircleDraw {
+  0% { stroke-dashoffset: 146; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes svgCheckDraw {
+  0% { stroke-dashoffset: 36; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes overlayFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes overlayScaleIn {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes nodeGlowPulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+  100% { opacity: 0.5; transform: scale(1); }
+}
+
+@keyframes dashFlow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes shimmerGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* --- Creative Utilities --- */
+.animate-success-icon {
+  animation: successIconEntry 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-slide-up,
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fadeSlideUp 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  opacity: 0;
+  animation: fadeIn 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-timeline-progress {
+  width: 0%;
+  animation: timelineProgress 550ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-svg-circle {
+  animation: svgCircleDraw 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-svg-check {
+  animation: svgCheckDraw 350ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards;
+}
+
+.animate-overlay-fade-in {
+  animation: overlayFadeIn 250ms ease-out forwards;
+}
+
+.animate-overlay-scale-in {
+  animation: overlayScaleIn 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-node-glow {
+  animation: nodeGlowPulse 2.5s ease-in-out infinite;
+}
+
+.animate-dash-flow {
+  animation: dashFlow 3s linear infinite;
+}
+
+/* Gradient Shimmer Text */
+.text-gradient-shimmer {
+  background: linear-gradient(135deg, #1E1B4B 0%, #5B3FD6 45%, #159B8C 85%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerGradient 6s ease infinite;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 196, 211, 0.5);
+}
+
+/* Stagger Delays */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+
+/* Reduced Motion Fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  .animate-success-icon,
+  .animate-fade-slide-up,
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-overlay-fade-in,
+  .animate-overlay-scale-in,
+  .animate-node-glow,
+  .animate-dash-flow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .text-gradient-shimmer {
+    animation: none !important;
+  }
+  .animate-timeline-progress {
+    animation: none !important;
+    width: 27% !important;
+  }
+  .animate-svg-circle,
+  .animate-svg-check {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
