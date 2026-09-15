@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { useAuth } from '../lib/auth'
@@ -16,7 +16,7 @@ export default function StudentDashboardView() {
   const { user } = useAuth()
   const userProfile = useSelector((state) => state.app.userProfile) || DEFAULT_STUDENT_PROFILE
 
-  const [studentProfile, setStudentProfile] = useState(() => {
+  const [studentProfile] = useState(() => {
     try {
       const saved = localStorage.getItem('samadhan_student_profile')
       return saved ? JSON.parse(saved) : DEFAULT_STUDENT_PROFILE
@@ -25,360 +25,305 @@ export default function StudentDashboardView() {
     }
   })
 
-  // Recommended Challenges Data
-  const recommendedChallenges = [
-    {
-      id: 'ch-water-gumla',
-      title: 'Drinking Water Quality & Heavy Metal Filtration',
-      domain: 'Water & Sanitation',
-      district: 'Ranchi, Jharkhand',
-      affectedPopulation: '14,200',
-      reportsCount: 32,
-      severity: '8.8 / 10',
-      matchScore: 94,
-      skillsNeeded: ['Water Testing', 'IoT Sensors', 'Filtration', 'Field Validation'],
-      teamStatus: 'Team AquaSense (Active)',
-      hasTeam: true,
-    },
-    {
-      id: 'ch-agri-blast',
-      title: 'Paddy Leaf Blast & Fungal Spore Early Detection AI',
-      domain: 'Agriculture & Rural Systems',
-      district: 'Khunti, Jharkhand',
-      affectedPopulation: '8,500',
-      reportsCount: 18,
-      severity: '7.9 / 10',
-      matchScore: 91,
-      skillsNeeded: ['Edge AI', 'Plant Pathology', 'Computer Vision', 'Mobile Diagnostics'],
-      teamStatus: 'Open for Teams',
-      hasTeam: false,
-    },
-    {
-      id: 'ch-solar-meter',
-      title: 'Low-Power Solar Smart Meter for Rural Micro-Grids',
-      domain: 'Smart Hardware & Energy',
-      district: 'Simdega, Jharkhand',
-      affectedPopulation: '6,200',
-      reportsCount: 14,
-      severity: '7.5 / 10',
-      matchScore: 88,
-      skillsNeeded: ['Embedded Systems', 'ESP32', 'Micro-controller Assembly', 'Telemetry'],
-      teamStatus: 'Open for Teams',
-      hasTeam: false,
-    },
-  ]
-
-  // Active Student Work
-  const activeWork = [
-    {
-      id: 'work-1',
-      title: 'Bio-Char & Activated Alumina Filtration System',
-      type: 'PROPOSAL DRAFT',
-      status: 'Under Faculty Review',
-      statusColor: 'bg-amber-100 text-amber-900 border-amber-300',
-      mentor: 'Dr. Anjali Kumar',
-      dueDate: 'Action Required',
-      route: '/student/proposal/prop-101',
-    },
-    {
-      id: 'work-2',
-      title: 'AquaSense Community Water Telemetry Unit',
-      type: 'ACTIVE PROJECT',
-      status: 'TRL 4 — Field Testing',
-      statusColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-      mentor: 'Dr. Anjali Kumar',
-      dueDate: 'Milestone Due in 3 days',
-      route: '/project/proj-water-01',
-    },
-  ]
-
-  // Recent Activity Feed
-  const recentActivity = [
-    {
-      id: 1,
-      icon: 'verified',
-      color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-      text: 'Faculty Mentor Dr. Anjali Kumar reviewed your TRL 3 lab filtration results.',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      icon: 'groups',
-      color: 'text-brand-violet bg-brand-violet/10 border-brand-violet/20',
-      text: 'Joined Team AquaSense as Lead Environmental Engineer.',
-      time: '1 day ago',
-    },
-    {
-      id: 3,
-      icon: 'description',
-      color: 'text-brand-indigo bg-brand-indigo/10 border-brand-indigo/20',
-      text: 'Submitted Proposal: Bio-Char & Activated Alumina Filtration System.',
-      time: '3 days ago',
-    },
-  ]
-
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-b from-[#FAF8FF] via-white to-[#F6F3FB] text-on-surface">
-      <main className="flex-grow pt-8 pb-20 px-6 md:px-margin-desktop max-w-[1240px] mx-auto w-full space-y-8">
-        {/* Welcome Header */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-outline-variant/70 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold text-brand-violet uppercase tracking-widest bg-brand-violet/10 border border-brand-violet/20 px-3 py-1 rounded-full">
-                STUDENT INNOVATOR PORTAL
-              </span>
-              <span className="text-xs text-on-surface-variant font-semibold">
-                • {studentProfile.university}
-              </span>
-              <span className="text-xs text-on-surface-variant font-semibold">
-                • {studentProfile.department}
-              </span>
+    <div className="min-h-screen flex flex-col justify-between bg-[#FAFAF8] text-on-surface">
+      <main className="flex-grow pt-6 pb-20 px-6 md:px-margin-desktop max-w-[1240px] mx-auto w-full space-y-8">
+        
+        {/* 1. EDITORIAL HERO HEADER (No giant floating card) */}
+        <div className="border-b border-outline-variant/50 pb-6 space-y-3">
+          <div className="space-y-1">
+            <div className="text-[11px] font-bold tracking-wider text-brand-violet uppercase">
+              STUDENT INNOVATOR
             </div>
-
-            <h1 className="font-display-lg text-brand-indigo text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Welcome back, <span className="text-brand-violet">{studentProfile.name}</span>
-            </h1>
-
-            <p className="text-xs sm:text-sm text-on-surface-variant font-medium">
-              &quot;Turn real community problems into solutions.&quot; — Ranchi University Civic Innovation Cell
-            </p>
+            <div className="text-xs text-on-surface-variant font-medium">
+              {studentProfile.university} • {studentProfile.department}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => navigate('/student/explorer')}
-              className="bg-brand-indigo text-white px-5 py-2.5 rounded-full font-label-md text-xs font-bold hover:bg-brand-violet transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-base">explore</span>
-              <span>Explore Civic Challenges</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/student/profile')}
-              className="border border-brand-indigo text-brand-indigo hover:bg-brand-indigo/5 px-4 py-2.5 rounded-full font-label-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-base">person</span>
-              <span>My Profile</span>
-            </button>
-          </div>
-        </div>
-
-        {/* STUDENT SNAPSHOT */}
-        <div className="space-y-3">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant block">
-            STUDENT SNAPSHOT
-          </span>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-2 hover:-translate-y-0.5 transition-all">
-              <div className="flex items-center justify-between text-brand-indigo">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">CHALLENGES JOINED</span>
-                <span className="material-symbols-outlined text-lg">flag</span>
-              </div>
-              <div className="text-3xl font-extrabold text-brand-indigo font-mono">2</div>
-              <p className="text-[11px] text-on-surface-variant">Active civic tracks</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="font-display-lg text-brand-indigo text-2xl sm:text-3xl font-extrabold tracking-tight">
+                Welcome back, {studentProfile.name}
+              </h1>
+              <p className="text-xs sm:text-sm text-on-surface-variant font-medium">
+                &quot;Turn real community problems into solutions.&quot;
+              </p>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-2 hover:-translate-y-0.5 transition-all">
-              <div className="flex items-center justify-between text-brand-violet">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">ACTIVE PROJECTS</span>
-                <span className="material-symbols-outlined text-lg">engineering</span>
-              </div>
-              <div className="text-3xl font-extrabold text-brand-violet font-mono">1</div>
-              <p className="text-[11px] text-on-surface-variant">TRL 4 prototype</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-2 hover:-translate-y-0.5 transition-all">
-              <div className="flex items-center justify-between text-brand-indigo">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">TEAMS</span>
-                <span className="material-symbols-outlined text-lg">groups</span>
-              </div>
-              <div className="text-3xl font-extrabold text-brand-indigo font-mono">1</div>
-              <p className="text-[11px] text-on-surface-variant">Team AquaSense</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-2 hover:-translate-y-0.5 transition-all">
-              <div className="flex items-center justify-between text-brand-violet">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">PROPOSALS</span>
-                <span className="material-symbols-outlined text-lg">description</span>
-              </div>
-              <div className="text-3xl font-extrabold text-brand-violet font-mono">2</div>
-              <p className="text-[11px] text-on-surface-variant">1 Under review</p>
-            </div>
-
-            <div className="bg-emerald-50/70 p-5 rounded-2xl border border-emerald-200/80 shadow-2xs space-y-2 hover:-translate-y-0.5 transition-all col-span-2 sm:col-span-1">
-              <div className="flex items-center justify-between text-emerald-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900">IMPACT / SOLUTIONS</span>
-                <span className="material-symbols-outlined text-lg text-emerald-700">task_alt</span>
-              </div>
-              <div className="text-3xl font-extrabold text-emerald-800 font-mono">1</div>
-              <p className="text-[11px] text-emerald-900 font-medium">Deployed in field</p>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/student/explorer')}
+                className="bg-brand-indigo text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-brand-violet transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <span>Explore Civic Challenges</span>
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/student/profile')}
+                className="border border-outline-variant text-brand-indigo hover:bg-surface-container-low px-4 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <span>My Profile</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* RECOMMENDED CHALLENGES */}
-        <div className="bg-white p-6 sm:p-7 rounded-3xl border border-outline-variant/70 shadow-2xs space-y-5">
-          <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
+        {/* 2. INSTITUTIONAL METRICS STRIP (Flat Information Row) */}
+        <div className="bg-white rounded-xl border border-outline-variant/60 shadow-2xs overflow-hidden">
+          <div className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-outline-variant/40 text-center">
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">CHALLENGES JOINED</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-indigo font-mono">2</div>
+              <span className="text-[11px] text-on-surface-variant block">Active civic tracks</span>
+            </div>
+
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">ACTIVE PROJECTS</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-indigo font-mono">1</div>
+              <span className="text-[11px] text-on-surface-variant block">TRL 4 prototype</span>
+            </div>
+
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">TEAMS</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-indigo font-mono">1</div>
+              <span className="text-[11px] text-on-surface-variant block">Team AquaSense</span>
+            </div>
+
+            <div className="p-4 space-y-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">PROPOSALS</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-brand-indigo font-mono">2</div>
+              <span className="text-[11px] text-on-surface-variant block">1 Under review</span>
+            </div>
+
+            <div className="p-4 space-y-0.5 bg-emerald-50/50 col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900 block">SOLUTIONS DEPLOYED</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-800 font-mono">1</div>
+              <span className="text-[11px] text-emerald-800 font-medium block">Field-verified</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. RECOMMENDED CHALLENGES (FEATURED HIERARCHY) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2.5">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-brand-violet uppercase tracking-widest bg-brand-violet/10 px-2.5 py-0.5 rounded-full">
-                  CAPABILITY MATCHED
-                </span>
-                <span className="text-xs text-on-surface-variant font-semibold">• Based on your skills &amp; department</span>
-              </div>
-              <h2 className="font-headline-md text-brand-indigo text-xl font-bold mt-1">
-                RECOMMENDED CHALLENGES FOR YOU
-              </h2>
+              <h2 className="text-lg font-bold text-brand-indigo">RECOMMENDED FOR YOU</h2>
+              <p className="text-xs text-on-surface-variant font-medium">
+                Based on your skills, department, and innovation interests
+              </p>
             </div>
-
             <button
               type="button"
               onClick={() => navigate('/student/explorer')}
-              className="text-xs font-bold text-brand-violet hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-brand-violet hover:underline cursor-pointer"
             >
-              View All Challenges &rarr;
+              View all challenges &rarr;
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {recommendedChallenges.map((ch) => (
-              <div
-                key={ch.id}
-                className="p-5 bg-surface-container-low rounded-2xl border border-outline-variant/50 hover:border-brand-violet transition-all space-y-3 flex flex-col justify-between hover:-translate-y-0.5"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <span className="text-[10px] font-bold text-brand-teal uppercase tracking-widest bg-brand-teal/10 border border-brand-teal/20 px-2.5 py-0.5 rounded-full">
-                      {ch.domain}
-                    </span>
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {ch.matchScore}% Match
-                    </span>
-                  </div>
-
-                  <h3 className="font-bold text-brand-indigo text-base leading-snug">
-                    {ch.title}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-on-surface-variant font-medium">
-                    <span>📍 {ch.district}</span>
-                    <span>•</span>
-                    <span>👥 {ch.affectedPopulation} affected</span>
-                    <span>•</span>
-                    <span className="text-rose-700 font-bold">Severity: {ch.severity}</span>
-                  </div>
-
-                  {/* Skills Chips */}
-                  <div className="pt-2 border-t border-outline-variant/40 flex flex-wrap gap-1.5">
-                    {ch.skillsNeeded.map((sk, i) => (
-                      <span key={i} className="text-[10px] font-medium bg-white text-brand-indigo px-2 py-0.5 rounded-md border border-outline-variant/40">
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-brand-violet">
-                    {ch.teamStatus}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/student/challenge/${ch.id}`)}
-                    className="bg-brand-indigo text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-brand-violet transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View Challenge</span>
-                    <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                  </button>
-                </div>
+          {/* Featured Dominant Challenge */}
+          <div className="bg-white p-6 rounded-xl border border-brand-indigo/30 shadow-2xs hover:border-brand-violet transition-colors space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-brand-indigo">Water &amp; Sanitation</span>
+                <span className="text-xs text-on-surface-variant">• Ranchi, Jharkhand</span>
               </div>
-            ))}
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                94% capability match
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-extrabold text-brand-indigo leading-tight">
+                DRINKING WATER QUALITY &amp; HEAVY METAL FILTRATION
+              </h3>
+              <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                High iron concentration (Fe &gt; 3.2 mg/L) across hand pumps in 12 villages causes health hazards for 14,200 residents. Requires low-cost inline physical filtration and IoT telemetry.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant/40 text-xs">
+              <div>
+                <span className="text-[10px] text-on-surface-variant block uppercase font-bold">COMMUNITY REPORTS</span>
+                <span className="font-bold text-brand-indigo">32 Verified Observations</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-on-surface-variant block uppercase font-bold">POTENTIALLY AFFECTED</span>
+                <span className="font-bold text-brand-indigo">14,200 Citizens · 3 Blocks</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-on-surface-variant block uppercase font-bold">SEVERITY SCORE</span>
+                <span className="font-bold text-rose-700">8.8 / 10 High Impact</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-xs">
+              <div className="text-on-surface-variant font-medium">
+                Required capabilities: <strong className="text-brand-indigo font-semibold">Environmental Engineering · Water Testing · IoT · Data Analysis</strong>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/challenge/ch-water-gumla')}
+                  className="bg-brand-indigo text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand-violet transition-colors cursor-pointer"
+                >
+                  View Challenge Intelligence
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/team-formation', { state: { challenge: { id: 'ch-water-gumla', title: 'Drinking Water Quality & Heavy Metal Filtration' } } })}
+                  className="border border-brand-indigo text-brand-indigo hover:bg-brand-indigo/5 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Join / Form Team
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Quieter Recommendations Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-outline-variant/60 hover:border-brand-violet transition-colors space-y-2 flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-brand-indigo">Agriculture &amp; Rural Systems</span>
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">91% Match</span>
+                </div>
+                <h4 className="font-bold text-brand-indigo text-sm">
+                  Paddy Leaf Blast &amp; Fungal Spore Early Detection AI
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-snug">
+                  Khunti, Jharkhand • 8,500 affected • 18 community reports • 7.9/10 severity
+                </p>
+              </div>
+              <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between text-xs">
+                <span className="text-on-surface-variant text-[11px]">Edge AI · Plant Pathology</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/challenge/ch-agri-blast')}
+                  className="text-brand-indigo font-bold hover:underline cursor-pointer"
+                >
+                  View Challenge &rarr;
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-outline-variant/60 hover:border-brand-violet transition-colors space-y-2 flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-brand-indigo">Smart Hardware &amp; Energy</span>
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">88% Match</span>
+                </div>
+                <h4 className="font-bold text-brand-indigo text-sm">
+                  Low-Power Solar Smart Meter for Rural Micro-Grids
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-snug">
+                  Simdega, Jharkhand • 6,200 affected • 14 community reports • 7.5/10 severity
+                </p>
+              </div>
+              <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between text-xs">
+                <span className="text-on-surface-variant text-[11px]">Embedded Systems · ESP32</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/challenge/ch-solar-meter')}
+                  className="text-brand-indigo font-bold hover:underline cursor-pointer"
+                >
+                  View Challenge &rarr;
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 2-COLUMN GRID: MY ACTIVE WORK & RECENT ACTIVITY */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* MY ACTIVE WORK (7 cols) */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-outline-variant/70 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-              <h2 className="font-headline-md text-brand-indigo text-lg font-bold">
-                MY ACTIVE WORK
-              </h2>
-              <span className="text-xs text-on-surface-variant font-medium">Tasks requiring action</span>
+        {/* 4. TWO-COLUMN: YOUR ACTIVE WORK & ACTION REQUIRED */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* YOUR ACTIVE WORK (7 cols) */}
+          <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-outline-variant/60 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2.5">
+              <h2 className="text-base font-bold text-brand-indigo">YOUR ACTIVE WORK</h2>
+              <span className="text-xs text-on-surface-variant font-medium">1 Active Project in Field</span>
             </div>
 
-            <div className="space-y-3">
-              {activeWork.map((work) => (
-                <div
-                  key={work.id}
-                  onClick={() => navigate(work.route)}
-                  className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/50 hover:border-brand-violet transition-all cursor-pointer space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold text-brand-indigo uppercase tracking-wider bg-brand-indigo/10 px-2.5 py-0.5 rounded-full">
-                      {work.type}
-                    </span>
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${work.statusColor}`}>
-                      {work.status}
-                    </span>
-                  </div>
-
-                  <h3 className="font-bold text-brand-indigo text-sm">
-                    {work.title}
-                  </h3>
-
-                  <div className="flex items-center justify-between text-xs text-on-surface-variant font-medium">
-                    <span>Mentor: <strong>{work.mentor}</strong></span>
-                    <span className="text-brand-violet font-bold flex items-center gap-1">
-                      <span>{work.dueDate}</span>
-                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                    </span>
-                  </div>
+            {/* Compact Project Row */}
+            <div className="p-4 bg-surface-container-low rounded-lg border border-outline-variant/40 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-extrabold text-brand-indigo text-base">AquaSense</h3>
+                  <p className="text-xs text-on-surface-variant font-medium">Smart Community Water Quality Monitoring</p>
                 </div>
-              ))}
-            </div>
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  FIELD TESTING
+                </span>
+              </div>
 
-            <div className="pt-2 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => navigate('/student/proposals')}
-                className="text-xs text-brand-indigo font-bold hover:text-brand-violet cursor-pointer"
-              >
-                View Proposals &rarr;
-              </button>
-              <span className="text-on-surface-variant text-xs">•</span>
-              <button
-                type="button"
-                onClick={() => navigate('/university/projects')}
-                className="text-xs text-brand-indigo font-bold hover:text-brand-violet cursor-pointer"
-              >
-                View Projects &rarr;
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface-variant font-medium">
+                <div>Challenge: <strong className="text-brand-indigo">Drinking Water Quality &amp; Heavy Metal Filtration</strong></div>
+                <div>Mentor: <strong className="text-brand-indigo">Dr. Anjali Kumar</strong></div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-brand-indigo">Project Completion</span>
+                  <span className="font-mono text-brand-violet font-bold">68%</span>
+                </div>
+                <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-outline-variant/40">
+                  <div className="h-full w-[68%] bg-brand-indigo rounded-full"></div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate('/project/proj-water-01')}
+                  className="bg-brand-indigo text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand-violet transition-colors cursor-pointer"
+                >
+                  Open Project Workspace &rarr;
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* RECENT ACTIVITY (5 cols) */}
-          <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-outline-variant/70 shadow-2xs space-y-4">
-            <h2 className="font-headline-md text-brand-indigo text-lg font-bold border-b border-outline-variant/40 pb-3">
-              RECENT ACTIVITY
+          {/* ACTION REQUIRED (5 cols) */}
+          <div className="lg:col-span-5 bg-white p-5 rounded-xl border border-outline-variant/60 shadow-2xs space-y-4">
+            <h2 className="text-base font-bold text-brand-indigo border-b border-outline-variant/40 pb-2.5">
+              ACTION REQUIRED
             </h2>
 
-            <div className="space-y-3">
-              {recentActivity.map((act) => (
-                <div key={act.id} className="p-3.5 bg-surface-container-low rounded-2xl border border-outline-variant/40 flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${act.color}`}>
-                    <span className="material-symbols-outlined text-base">{act.icon}</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-brand-indigo font-medium leading-snug">{act.text}</p>
-                    <span className="text-[10px] text-on-surface-variant font-mono">{act.time}</span>
-                  </div>
+            <div className="space-y-3 text-xs">
+              <div
+                onClick={() => navigate('/student/proposals')}
+                className="p-3 bg-surface-container-low rounded-lg border border-outline-variant/40 hover:border-brand-violet transition-colors cursor-pointer space-y-1"
+              >
+                <div className="flex items-center gap-2 font-bold text-brand-indigo">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                  <span>Proposal &quot;AquaSense&quot; — Faculty Review Pending</span>
                 </div>
-              ))}
+                <p className="text-[11px] text-on-surface-variant pl-4">
+                  Dr. Anjali Kumar added review feedback for TRL 3 alumina filter model.
+                </p>
+                <div className="pl-4 pt-1 text-brand-violet font-bold">View proposal &rarr;</div>
+              </div>
+
+              <div
+                onClick={() => navigate('/project/proj-water-01')}
+                className="p-3 bg-surface-container-low rounded-lg border border-outline-variant/40 hover:border-brand-violet transition-colors cursor-pointer space-y-1"
+              >
+                <div className="flex items-center gap-2 font-bold text-brand-indigo">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
+                  <span>Field Testing Milestone — Evidence Required</span>
+                </div>
+                <p className="text-[11px] text-on-surface-variant pl-4">
+                  Upload water lab telemetry test results for Gumla hand pump 4.
+                </p>
+                <div className="pl-4 pt-1 text-brand-violet font-bold">Open project &rarr;</div>
+              </div>
             </div>
           </div>
+
         </div>
       </main>
     </div>
