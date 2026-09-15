@@ -70,6 +70,20 @@ export default function ProposalDetailView() {
         score_innovation: scoreInno,
         score_team: scoreTeam,
       })
+      if (decision === 'APPROVED') {
+        try {
+          await api.createProject({
+            challenge_id: proposal?.challenge_id || 'ch-water-gumla',
+            challenge_title: proposal?.challenge_title || proposal?.title || 'Drinking Water Quality & Heavy Metal Filtration',
+            team_id: proposal?.team_id || 'team-aquasense',
+            team_name: proposal?.team_name || 'Team AquaSense',
+            proposal_id: id,
+            proposal_title: proposal?.title,
+          })
+        } catch (pErr) {
+          console.warn('[Create Project Error]:', pErr.message)
+        }
+      }
       await loadProposal()
     } catch (err) {
       console.error('[Review Proposal Error]:', err)

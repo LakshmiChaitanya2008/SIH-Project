@@ -298,16 +298,37 @@ export default function ProjectDetailView() {
                         <span className="font-bold text-brand-indigo">{project.rubric.score_impact}/15</span>
                       </div>
                       <div className="p-2 bg-surface-container-low rounded">
-                        <span className="block text-on-surface-variant font-bold">INNOVATION</span>
-                        <span className="font-bold text-brand-indigo">{project.rubric.score_innovation}/10</span>
-                      </div>
-                      <div className="p-2 bg-surface-container-low rounded">
                         <span className="block text-on-surface-variant font-bold">TEAM</span>
                         <span className="font-bold text-brand-indigo">{project.rubric.score_team}/10</span>
                       </div>
                     </div>
                   </div>
                 )}
+
+                {/* Ecosystem Collaboration Card */}
+                <div className="bg-brand-indigo/5 p-6 rounded-2xl border border-brand-indigo/15 space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-brand-indigo uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-sm text-brand-violet">handshake</span>
+                      ECOSYSTEM PARTNER
+                    </span>
+                    <span className="text-[10px] font-bold text-brand-teal uppercase bg-brand-teal/10 px-2 py-0.5 rounded-full">
+                      {project.partner_name ? 'Linked Partner' : 'Available'}
+                    </span>
+                  </div>
+                  <p className="text-on-surface-variant leading-relaxed">
+                    {project.partner_name
+                      ? `Active partnership with ${project.partner_name} for field testing & grant funding.`
+                      : 'Request industry, CSR, startup, or government lab collaboration for pilot testbeds.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/university/collaborations', { state: { project } })}
+                    className="w-full bg-brand-indigo text-white py-2 rounded-full font-label-md text-xs font-bold hover:bg-brand-violet transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Request Collaboration &rarr;</span>
+                  </button>
+                </div>
               </div>
             </div>
           </>

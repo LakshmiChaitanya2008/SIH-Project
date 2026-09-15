@@ -129,25 +129,48 @@ export default function CompletedSolutionView() {
 
             {/* IMPACT SUMMARY METRICS */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1">
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase block">TRL STAGE REACHED</span>
-                <div className="text-2xl font-extrabold text-brand-indigo font-mono">TRL {project.trl_stage || 4}</div>
+              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1 text-center">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase block">CITIZENS BENEFITED</span>
+                <div className="text-2xl font-extrabold text-brand-indigo font-mono">14,200</div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1">
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase block">MILESTONES VERIFIED</span>
-                <div className="text-2xl font-extrabold text-brand-teal font-mono">
-                  {project.completed_milestones_count} / {project.milestones_count}
-                </div>
+              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1 text-center">
+                <span className="text-[10px] font-bold text-on-surface-variant uppercase block">VILLAGES &amp; BLOCKS COVERED</span>
+                <div className="text-2xl font-extrabold text-brand-teal font-mono">12 Villages · 3 Blocks</div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1">
+              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1 text-center">
                 <span className="text-[10px] font-bold text-on-surface-variant uppercase block">EVALUATION RUBRIC</span>
                 <div className="text-2xl font-extrabold text-brand-indigo font-mono">
                   {project.rubric?.total_score || 46} / 50
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1">
+              <div className="bg-white p-5 rounded-2xl border border-outline-variant/70 shadow-2xs space-y-1 text-center">
                 <span className="text-[10px] font-bold text-on-surface-variant uppercase block">DEPLOYMENT STATUS</span>
-                <div className="text-2xl font-extrabold text-emerald-600 font-mono">100%</div>
+                <div className="text-2xl font-extrabold text-emerald-600 font-mono">100% Deployed</div>
+              </div>
+            </div>
+
+            {/* BEFORE / AFTER MEASUREMENT & FIELD IMPACT */}
+            <div className="bg-gradient-to-r from-brand-indigo/10 via-brand-violet/10 to-brand-teal/10 p-6 rounded-3xl border border-brand-indigo/20 space-y-3 text-xs">
+              <span className="font-bold text-brand-indigo uppercase text-[11px] tracking-wider block flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-brand-teal">trending_up</span>
+                MEASURABLE COMMUNITY IMPACT &amp; FIELD VERIFICATION
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div className="bg-white/90 p-4 rounded-2xl border border-outline-variant/40 space-y-1">
+                  <span className="text-[10px] font-bold text-on-surface-variant block uppercase">BEFORE DEPLOYMENT</span>
+                  <p className="font-bold text-rose-700 text-xs">8.8/10 Fluoride &amp; Sediment Contamination</p>
+                  <p className="text-[11px] text-on-surface-variant">32 citizen reports across Gumla primary schools</p>
+                </div>
+                <div className="bg-white/90 p-4 rounded-2xl border border-outline-variant/40 space-y-1">
+                  <span className="text-[10px] font-bold text-on-surface-variant block uppercase">FIELD PROTOTYPE RESULT</span>
+                  <p className="font-bold text-emerald-700 text-xs font-mono">99.4% Heavy Metal &amp; Fluoride Removal</p>
+                  <p className="text-[11px] text-on-surface-variant">50L/hr activated zeolite filtration with IoT telemetry</p>
+                </div>
+                <div className="bg-white/90 p-4 rounded-2xl border border-outline-variant/40 space-y-1">
+                  <span className="text-[10px] font-bold text-on-surface-variant block uppercase">SCALABILITY &amp; ADOPTION</span>
+                  <p className="font-bold text-brand-indigo text-xs">Adopted by Jharkhand Water Mission</p>
+                  <p className="text-[11px] text-on-surface-variant">Commissioned across 12 village borewells</p>
+                </div>
               </div>
             </div>
 

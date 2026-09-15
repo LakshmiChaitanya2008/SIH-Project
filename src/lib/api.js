@@ -118,6 +118,10 @@ export const api = {
   // Projects & Milestones
   getProjects: (params = '') => request(`/projects${params ? '?' + params : ''}`),
   getProject: (id) => request(`/projects?id=${encodeURIComponent(id)}`),
+  createProject: (data) => request('/projects', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
   updateProject: (idOrPayload, data = {}) => {
     const payload = typeof idOrPayload === 'string'
       ? { id: idOrPayload, ...data }
@@ -132,8 +136,16 @@ export const api = {
     body: JSON.stringify(data),
   }),
 
+  // Collaborations
+  getCollaborations: (params = '') => request(`/collaborations${params ? '?' + params : ''}`),
+  requestCollaboration: (data) => request('/collaborations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
   // Admin
   getDashboard: () => request('/admin/dashboard'),
   seedDemo: () => request('/admin/seed', { method: 'POST' }),
   resetDemo: () => request('/admin/reset', { method: 'POST' }),
 }
+
