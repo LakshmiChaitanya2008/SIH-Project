@@ -49,6 +49,9 @@ import PartnerPlaceholderView from './views/PartnerPlaceholderView'
 import StudentDashboardView from './views/StudentDashboardView'
 import StudentChallengeDetailView from './views/StudentChallengeDetailView'
 import StudentProfileView from './views/StudentProfileView'
+import AdminLoginView from './views/admin/AdminLoginView'
+import AdminLayout from './components/AdminLayout'
+import AdminDashboardView from './views/admin/AdminDashboardView'
 
 export default function App() {
   return (
@@ -56,6 +59,15 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Standalone Admin Login */}
+            <Route path="/admin/login" element={<AdminLoginView />} />
+
+            {/* Dedicated Admin Portal Shell (Role Protected) */}
+            <Route element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route path="/admin/dashboard" element={<AdminDashboardView />} />
+            </Route>
+
+            {/* Standard Public & User Portal Layout */}
             <Route element={<Layout />}>
               {/* Public Routes */}
               <Route path="/" element={<IntroView />} />

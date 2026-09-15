@@ -43,23 +43,48 @@ const DEMO_USERS = {
       id: 'demo-user-admin-002',
       email: 'admin@samadhansetu.in',
       user_metadata: {
-        full_name: 'Ranchi University',
+        full_name: 'SamadhanSetu Administration',
         role: 'admin',
         district: 'Ranchi',
         state: 'Jharkhand',
-        institution: 'Ranchi University',
-        phone: '+91 94311 00112',
+        institution: 'Jharkhand Civic Innovation Mission',
+        phone: '+91 651 2200112',
       },
     },
     profile: {
       id: 'demo-user-admin-002',
-      full_name: 'Ranchi University',
+      full_name: 'SamadhanSetu Administration',
       role: 'admin',
       district: 'Ranchi',
       state: 'Jharkhand',
-      institution: 'Ranchi University',
-      phone: '+91 94311 00112',
+      institution: 'Jharkhand Civic Innovation Mission',
+      phone: '+91 651 2200112',
       email: 'admin@samadhansetu.in',
+    },
+  },
+  'admin@samadhansetu.gov.in': {
+    password: 'admin123',
+    user: {
+      id: 'demo-user-admin-002-gov',
+      email: 'admin@samadhansetu.gov.in',
+      user_metadata: {
+        full_name: 'SamadhanSetu Administration',
+        role: 'admin',
+        district: 'Ranchi',
+        state: 'Jharkhand',
+        institution: 'Jharkhand Civic Innovation Mission',
+        phone: '+91 651 2200112',
+      },
+    },
+    profile: {
+      id: 'demo-user-admin-002-gov',
+      full_name: 'SamadhanSetu Administration',
+      role: 'admin',
+      district: 'Ranchi',
+      state: 'Jharkhand',
+      institution: 'Jharkhand Civic Innovation Mission',
+      phone: '+91 651 2200112',
+      email: 'admin@samadhansetu.gov.in',
     },
   },
   'student@demo.ac.in': {
@@ -394,16 +419,21 @@ export function ProtectedRoute({ children, requiredRole }) {
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       const targetPath = location.pathname
-      navigate('/auth', { state: { from: targetPath }, replace: true })
+      const loginRoute = targetPath.startsWith('/admin') ? '/admin/login' : '/auth'
+      navigate(loginRoute, { state: { from: targetPath }, replace: true })
     }
     if (!loading && isAuthenticated && requiredRole) {
       const userRole = (profile?.role || 'citizen').toLowerCase()
+      if (requiredRole === 'admin' && userRole !== 'admin') {
+        navigate('/admin/login', { replace: true })
+        return
+      }
       const isMentorAuthorized = ['mentor', 'admin', 'university_faculty', 'government_officer'].includes(userRole)
       if (requiredRole === 'mentor' && !isMentorAuthorized) {
         const homeRoutes = {
           citizen: '/citizen/home',
-          admin: '/mentor/dashboard',
-          student: '/student/explorer',
+          admin: '/admin/dashboard',
+          student: '/student/dashboard',
           partner: '/partner/dashboard',
         }
         navigate(homeRoutes[userRole] || '/', { replace: true })
