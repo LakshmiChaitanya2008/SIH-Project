@@ -46,16 +46,30 @@ export default async function handler(req, res) {
     // Ensure demo users exist
     const studentUserId = '11111111-1111-1111-1111-111111111111'
     const facultyUserId = '2b79fc24-8235-48a1-989f-2eee0a4bffc2'
-    await supabase.from('users').upsert({
-      id: studentUserId,
-      email: 'student@demo.ac.in',
-      role: 'UNIVERSITY_RESEARCHER',
-      status: 'ACTIVE',
-    })
+    await supabase.from('users').upsert([
+      {
+        id: studentUserId,
+        email: 'student@demo.ac.in',
+        role: 'UNIVERSITY_RESEARCHER',
+        status: 'ACTIVE',
+      },
+      {
+        id: facultyUserId,
+        email: 'faculty@demo.ac.in',
+        role: 'FACULTY',
+        status: 'ACTIVE',
+      },
+    ])
+
 
     // Known Districts
     const gumlaDistrictId = '45f4cdc5-52ba-438b-8119-6fb551dab556'
     const ranchiDistrictId = '1905f32f-9475-4e16-bfa3-b047a6f387aa'
+
+    await supabase.from('districts').upsert([
+      { id: gumlaDistrictId, name: 'Gumla', state: 'Jharkhand' },
+      { id: ranchiDistrictId, name: 'Ranchi', state: 'Jharkhand' },
+    ])
 
     // 1. Upload playable demo citizen audio note to Supabase Storage
     const audioPath = 'voice/demo_citizen_voice_note.webm'
@@ -111,7 +125,7 @@ export default async function handler(req, res) {
         original_text: 'हाथ के चापाकल का पानी पीने से पेट दर्द और दांतों में पीलापन हो रहा है। फ्लोराइड की समस्या है।',
         translated_text: 'Drinking water from hand pump causes stomach pain and yellowing of teeth. There is a fluoride issue.',
         original_language: 'hi',
-        submission_channel: 'VOICE_CALL',
+        submission_channel: 'VOICE',
         audio_url: audioPublicUrl,
         district_id: gumlaDistrictId,
         status: 'CLUSTERED',
@@ -135,7 +149,8 @@ export default async function handler(req, res) {
         status: 'SUBMITTED',
       },
     ]
-    await supabase.from('problem_submissions').insert(submissions)
+    const { error: subErr } = await supabase.from('problem_submissions').insert(submissions)
+    if (subErr) throw new Error(`Submissions insert failed: ${subErr.message}`)
 
     // 4. Insert AI Analysis
     const aiAnalysis = [
@@ -143,45 +158,56 @@ export default async function handler(req, res) {
         submission_id: subWater1Id,
         domain: 'WATER QUALITY & SANITATION',
         severity_score: 8.5,
-        title: 'Borewell Water Turbidity & Chemical Contamination',
-        summary: 'High turbidity and possible mineral runoff reported in Gumla borewells.',
-        key_issues: ['Chemical Discoloration', 'Child Illness', 'Unsafe Drinking Water'],
+        detected_language: 'en',
+        translated_text: 'Borewell water in Gumla has yellow tint and foul smell. Children are falling sick after drinking it.',
+        severity_explanation: 'High turbidity and chemical discoloration impacting community drinking water safety.',
+        confidence: 0.96,
+        ai_model_version: 'gemini-1.5-flash',
       },
       {
         submission_id: subWater2Id,
         domain: 'WATER QUALITY & SANITATION',
         severity_score: 8.0,
-        title: 'Saline & Turbid Tap Water Supply',
-        summary: 'Villagers requesting urgent filtration due to high salinity and suspended solids.',
-        key_issues: ['Salinity', 'Turbidity', 'Filtration Need'],
+        detected_language: 'hi',
+        translated_text: 'The water from the tap in our village is very salty and muddy. A filter is urgently needed.',
+        severity_explanation: 'High salinity and suspended solids in village tap water.',
+        confidence: 0.94,
+        ai_model_version: 'gemini-1.5-flash',
       },
       {
         submission_id: subWater3Id,
         domain: 'WATER QUALITY & SANITATION',
         severity_score: 9.0,
-        title: 'Severe Fluorosis & Dental Staining from Handpumps',
-        summary: 'Direct evidence of endemic fluorosis from deep aquifer handpumps.',
-        key_issues: ['Fluorosis', 'Dental Staining', 'Aquifer Toxicity'],
+        detected_language: 'hi',
         transcribed_text: 'हाथ के चापाकल का पानी पीने से पेट दर्द और दांतों में पीलापन हो रहा है। फ्लोराइड की समस्या है।',
+        translated_text: 'Drinking water from hand pump causes stomach pain and yellowing of teeth. There is a fluoride issue.',
+        severity_explanation: 'Direct evidence of endemic fluorosis from deep aquifer handpumps.',
+        confidence: 0.98,
+        ai_model_version: 'gemini-1.5-flash',
       },
       {
         submission_id: subAgri1Id,
         domain: 'AGRICULTURE & RURAL LIVELIHOOD',
         severity_score: 6.5,
-        title: 'Soil Moisture Deficit in Vegetable Fields',
-        summary: 'Canal schedule delays causing acute moisture stress in Kanke block.',
-        key_issues: ['Canal Irrigation Deficit', 'Soil Moisture', 'Potato Yield'],
+        detected_language: 'en',
+        translated_text: 'Lack of timely canal water for potato fields in Kanke block. Soil moisture drying rapidly.',
+        severity_explanation: 'Canal schedule delays causing acute moisture stress.',
+        confidence: 0.92,
+        ai_model_version: 'gemini-1.5-flash',
       },
       {
         submission_id: subAgri2Id,
         domain: 'AGRICULTURE & RURAL LIVELIHOOD',
         severity_score: 7.0,
-        title: 'Nocturnal Grid Power Bottleneck for Paddy Fields',
-        summary: 'Night-only power schedule hampers farm safety; solar irrigation needed.',
-        key_issues: ['Erratic Grid Power', 'Solar Irrigation', 'Farm Safety'],
+        detected_language: 'hi',
+        translated_text: 'Electricity for irrigation in paddy fields only comes at night, automatic solar pump needed.',
+        severity_explanation: 'Night-only power schedule hampers farm safety.',
+        confidence: 0.91,
+        ai_model_version: 'gemini-1.5-flash',
       },
     ]
-    await supabase.from('problem_ai_analysis').insert(aiAnalysis)
+    const { error: aiErr } = await supabase.from('problem_ai_analysis').insert(aiAnalysis)
+    if (aiErr) throw new Error(`AI Analysis insert failed: ${aiErr.message}`)
 
     // 5. Insert Serialized 768-dim Embeddings
     const dummyVector = Array.from({ length: 768 }, (_, i) => Math.sin(i / 10) * 0.05)
@@ -191,10 +217,11 @@ export default async function handler(req, res) {
       embedding: serializedVector,
       model_name: 'models/gemini-embedding-001',
     }))
-    await supabase.from('problem_embeddings').insert(embeddings)
+    const { error: embErr } = await supabase.from('problem_embeddings').insert(embeddings)
+    if (embErr) throw new Error(`Embeddings insert failed: ${embErr.message}`)
 
     // 6. Insert Emerging Problem Cluster
-    await supabase.from('problem_clusters').insert({
+    const { error: clusErr } = await supabase.from('problem_clusters').insert({
       id: clusterWaterId,
       name: 'Unsafe Drinking Water in Gumla',
       description: 'Recurring reports of high fluoride contamination and water turbidity across Gumla borewells affecting community health.',
@@ -202,12 +229,14 @@ export default async function handler(req, res) {
       problem_count: 3,
       avg_severity: 8.5,
     })
+    if (clusErr) throw new Error(`Cluster insert failed: ${clusErr.message}`)
 
-    await supabase.from('problem_cluster_members').insert([
+    const { error: memErr0 } = await supabase.from('problem_cluster_members').insert([
       { id: '00000000-0000-0000-0002-000000000011', cluster_id: clusterWaterId, submission_id: subWater1Id, similarity_score: 0.94 },
       { id: '00000000-0000-0000-0002-000000000012', cluster_id: clusterWaterId, submission_id: subWater2Id, similarity_score: 0.91 },
       { id: '00000000-0000-0000-0002-000000000013', cluster_id: clusterWaterId, submission_id: subWater3Id, similarity_score: 0.96 },
     ])
+    if (memErr0) throw new Error(`Cluster members insert failed: ${memErr0.message}`)
 
     // 7. Insert Validated Problem Specification
     await supabase.from('problem_specifications').insert({

@@ -9,6 +9,7 @@ export default function CitizenAIUnderstandingView() {
   const navigate = useNavigate();
   const communitySignals = useSelector((s) => s.app.communitySignals);
   const activeAIUnderstanding = useSelector((s) => s.app.activeAIUnderstanding);
+  const reportDraft = useSelector((s) => s.app.reportDraft);
   const selectedLanguage = useSelector((s) => s.app.selectedLanguage);
 
   const [showTechDetails, setShowTechDetails] = useState(false);
@@ -18,6 +19,10 @@ export default function CitizenAIUnderstandingView() {
     description: 'The water from our village hand pump has turned rusty brown after monsoon rains.',
     location: 'Gumla District, Jharkhand',
   };
+
+  // Get uploaded evidence photo if present
+  const evidenceList = activeAIUnderstanding?.evidenceList || reportDraft?.evidence || currentSignal.evidence || [];
+  const primaryImage = evidenceList.find((e) => e.previewUrl || e.storage_path);
 
   const [loading, setLoading] = useState(!activeAIUnderstanding);
   const [understanding, setUnderstanding] = useState(
@@ -62,7 +67,7 @@ export default function CitizenAIUnderstandingView() {
     return () => {
       isMounted = false;
     };
-  }, [currentSignal, selectedLanguage, dispatch]);
+  }, [currentSignal, selectedLanguage, dispatch, activeAIUnderstanding]);
 
   const severityBadgeStyles = {
     critical: 'bg-red-500/10 text-red-700 border-red-500/30',
@@ -93,27 +98,41 @@ export default function CitizenAIUnderstandingView() {
         {/* Header Title & Subtitle */}
         <div className="text-center max-w-md mx-auto space-y-0.5 py-0.5">
           <h1 className="font-display-lg text-[#1E1B4B] text-xl sm:text-2xl font-extrabold tracking-tight">
-            {"Let's understand what you shared."}
+            Here's what we understood
           </h1>
           <p className="font-body-md text-on-surface-variant text-xs font-medium leading-normal max-w-md mx-auto">
-            Our civic intelligence engine has extracted structured problem categories and community impact factors.
+            Our civic AI model has extracted structured problem categories and community impact signals from your report.
           </p>
         </div>
 
-        {/* 2. Compact Submission Summary Card */}
-        <div className="w-full bg-surface-container-low/60 p-3 rounded-xl border border-outline-variant/60 space-y-1.5 text-left text-xs shadow-2xs">
+        {/* 2. Compact Submission Summary Card + Actual Photo Evidence Preview */}
+        <div className="w-full bg-surface-container-low/60 p-3.5 rounded-xl border border-outline-variant/60 space-y-2 text-left text-xs shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-brand-indigo uppercase tracking-wider">YOUR SUBMISSION</span>
+            <span className="text-[10px] font-bold text-brand-indigo uppercase tracking-wider">YOUR SUBMITTED OBSERVATION</span>
             <span className="text-[10px] font-mono font-bold text-brand-teal bg-white px-2 py-0.5 rounded-md border border-outline-variant/40">
-              {currentSignal.id || 'SS-2026-00401'}
+              {activeAIUnderstanding?.id || currentSignal.id || 'SS-2026-00401'}
             </span>
           </div>
-          <p className="font-body-md text-on-surface text-xs italic leading-snug line-clamp-2">
-            &quot;{currentSignal.description || 'Community problem observation.'}&quot;
-          </p>
-          <div className="text-[11px] text-on-surface-variant flex items-center gap-1 font-semibold">
-            <span className="material-symbols-outlined text-brand-teal text-sm shrink-0">location_on</span>
-            <span className="truncate">{understanding.extractedLocation || currentSignal.location?.label || currentSignal.location}</span>
+
+          <div className="flex items-start gap-3">
+            {primaryImage && (primaryImage.previewUrl || primaryImage.storage_path) && (
+              <div className="w-16 h-16 rounded-lg border border-outline-variant/40 bg-white overflow-hidden shrink-0 shadow-2xs">
+                <img
+                  src={primaryImage.previewUrl || primaryImage.storage_path}
+                  alt="Uploaded Evidence Photo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 space-y-1">
+              <p className="font-body-md text-on-surface text-xs font-medium italic leading-snug line-clamp-3">
+                &quot;{understanding.issueSummary || currentSignal.description || 'Community problem observation.'}&quot;
+              </p>
+              <div className="text-[11px] text-on-surface-variant flex items-center gap-1 font-semibold">
+                <span className="material-symbols-outlined text-brand-teal text-sm shrink-0">location_on</span>
+                <span className="truncate">{understanding.extractedLocation || currentSignal.location?.label || currentSignal.location}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -121,7 +140,7 @@ export default function CitizenAIUnderstandingView() {
         {loading ? (
           <div className="w-full py-8 flex flex-col items-center justify-center space-y-2 bg-white rounded-xl border border-outline-variant/60 p-4">
             <span className="material-symbols-outlined text-3xl text-brand-violet animate-spin">smart_toy</span>
-            <p className="text-xs text-brand-indigo font-bold">Structuring civic intelligence with Meta Llama 3.3...</p>
+            <p className="text-xs text-brand-indigo font-bold">Structuring civic intelligence with AI model...</p>
             <span className="text-[10px] text-on-surface-variant">Analyzing domain, affected groups, and local severity</span>
           </div>
         ) : (
@@ -212,7 +231,7 @@ export default function CitizenAIUnderstandingView() {
           </div>
         )}
 
-        {/* 4. Collapsible Technical AI Information */}
+        {/* 4. Collapsible Technical AI Information (Collapsed by default) */}
         <div className="w-full pt-0.5">
           <button
             type="button"
@@ -239,7 +258,7 @@ export default function CitizenAIUnderstandingView() {
                         ? 'Meta Llama 3.3 70B (Groq LPU)'
                         : understanding.provider === 'gemini'
                         ? 'Google Gemini 2.0 Flash'
-                        : 'Deterministic Heuristic Rules (Offline)'}
+                        : 'Civic Intelligence NLP Engine'}
                     </strong>
                   </span>
                 </div>
@@ -251,7 +270,7 @@ export default function CitizenAIUnderstandingView() {
                     </span>
                   )}
                   <span className="text-[10px] font-bold text-brand-teal font-mono bg-white px-2 py-0.5 rounded-md border border-brand-teal/20">
-                    ₹0 Budget
+                    Verified
                   </span>
                 </div>
               </div>

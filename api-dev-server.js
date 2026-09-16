@@ -31,7 +31,15 @@ export function vercelApiDevPlugin() {
         }
 
         const parsedUrl = url.parse(req.url, true)
-        const pathname = parsedUrl.pathname // e.g. /api/ai/understand
+        let pathname = parsedUrl.pathname // e.g. /api/ai/understand
+
+        // Polyfill route matching for /api/admin/problem/:id/trace
+        const problemTraceMatch = pathname.match(/^\/api\/admin\/problem\/([^/]+)\/trace$/)
+        if (problemTraceMatch) {
+          pathname = '/api/admin/trace'
+          parsedUrl.query = parsedUrl.query || {}
+          parsedUrl.query.id = problemTraceMatch[1]
+        }
 
         // Resolve handler file path
         const projectRoot = process.cwd()

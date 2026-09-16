@@ -52,6 +52,11 @@ import StudentProfileView from './views/StudentProfileView'
 import AdminLoginView from './views/admin/AdminLoginView'
 import AdminLayout from './components/AdminLayout'
 import AdminDashboardView from './views/admin/AdminDashboardView'
+import AdminProblemTraceView from './views/admin/AdminProblemTraceView'
+import AdminUniversityMatchingView from './views/admin/AdminUniversityMatchingView'
+import AdminProjectsView from './views/admin/AdminProjectsView'
+import AdminProjectDetailView from './views/admin/AdminProjectDetailView'
+import AdminReportsView from './views/admin/AdminReportsView'
 
 export default function App() {
   return (
@@ -65,6 +70,22 @@ export default function App() {
             {/* Dedicated Admin Portal Shell (Role Protected) */}
             <Route element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
               <Route path="/admin/dashboard" element={<AdminDashboardView />} />
+              <Route path="/admin/submissions" element={<ValidationQueueView />} />
+              <Route path="/admin/submissions/:id/review" element={<PatternValidationView />} />
+              <Route path="/admin/problem/:id/review" element={<PatternValidationView />} />
+              <Route path="/admin/problem/:id/matching" element={<AdminUniversityMatchingView />} />
+              <Route path="/admin/submissions/:id/matching" element={<AdminUniversityMatchingView />} />
+              <Route path="/admin/problem/:id" element={<AdminProblemTraceView />} />
+              <Route path="/admin/signals" element={<ValidationQueueView />} />
+              <Route path="/admin/review" element={<PatternValidationView />} />
+              <Route path="/admin/clusters" element={<CommunityPatternsView />} />
+              <Route path="/admin/challenges" element={<PublishedChallengesView />} />
+              <Route path="/admin/projects" element={<AdminProjectsView />} />
+              <Route path="/admin/projects/:id" element={<AdminProjectDetailView />} />
+              <Route path="/admin/institutions" element={<UniversityProfileView />} />
+              <Route path="/admin/partners" element={<CollaborationsView />} />
+              <Route path="/admin/users" element={<StudentProfileView />} />
+              <Route path="/admin/reports" element={<AdminReportsView />} />
             </Route>
 
             {/* Standard Public & User Portal Layout */}
@@ -112,7 +133,7 @@ export default function App() {
               <Route path="/validation/pattern" element={<ProtectedRoute requiredRole="mentor"><PatternValidationView /></ProtectedRoute>} />
               <Route path="/challenge/formation" element={<ProtectedRoute requiredRole="mentor"><ChallengeFormationView /></ProtectedRoute>} />
               <Route path="/challenge/published" element={<ProtectedRoute requiredRole="mentor"><ChallengePublishedView /></ProtectedRoute>} />
-              
+
               {/* Student Innovation Portal Routes */}
               <Route path="/student/dashboard" element={<ProtectedRoute><StudentDashboardView /></ProtectedRoute>} />
               <Route path="/challenges" element={<PublishedChallengesView />} />

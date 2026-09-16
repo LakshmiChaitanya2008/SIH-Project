@@ -12,14 +12,7 @@ const initialReportDraft = {
   voiceAudioUrl: null,
   voiceTranscript: '',
   evidence: [],
-  location: {
-    method: 'manual',
-    label: 'Gumla District, Jharkhand',
-    district: 'Gumla',
-    state: 'Jharkhand',
-    latitude: 23.0423,
-    longitude: 84.5412
-  },
+  location: null,
   consentGiven: false,
   submitting: false,
   submissionError: null,

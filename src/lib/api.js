@@ -143,8 +143,15 @@ export const api = {
     body: JSON.stringify(data),
   }),
 
-  // Admin
+  // Admin & University Handoff
   getDashboard: () => request('/admin/dashboard'),
+  getAnalytics: () => request('/admin/analytics'),
+  getProblemTrace: (id) => request(`/admin/trace?id=${encodeURIComponent(id)}`),
+  assignUniversity: (data) => request('/admin/assign', { method: 'POST', body: JSON.stringify(data) }),
+  acceptUniversityRequest: (data) => request('/admin/assign', { method: 'POST', body: JSON.stringify(data) }),
+  getUniversityRequests: (problemId) => request(`/admin/university-requests?problemId=${encodeURIComponent(problemId || '')}`),
+  sendUniversityRequests: (data) => request('/admin/university-requests', { method: 'POST', body: JSON.stringify(data) }),
+  respondUniversityRequest: (data) => request('/admin/university-requests/respond', { method: 'POST', body: JSON.stringify(data) }),
   seedDemo: () => request('/admin/seed', { method: 'POST' }),
   resetDemo: () => request('/admin/reset', { method: 'POST' }),
 }

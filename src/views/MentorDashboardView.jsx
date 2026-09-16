@@ -18,6 +18,59 @@ export default function MentorDashboardView() {
   const [recentClusters, setRecentClusters] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [oppStatus, setOppStatus] = useState('PENDING')
+  const [acceptingLoading, setAcceptingLoading] = useState(false)
+
+  const loadUnivStatus = async () => {
+    try {
+      const res = await api.getUniversityRequests('00000000-0000-0000-0002-000000000001')
+      if (res?.requests) {
+        const ranchiReq = res.requests.find((r) => r.universityId === '2b79fc24-8235-48a1-989f-2eee0a4bffc2')
+        if (ranchiReq) {
+          setOppStatus(ranchiReq.status)
+        }
+      }
+    } catch (err) {
+      console.warn('[MentorDashboardView] Could not load request status:', err.message)
+    }
+  }
+
+  const handleAcceptOpportunity = async (e) => {
+    if (e) e.stopPropagation()
+    setAcceptingLoading(true)
+    try {
+      await api.respondUniversityRequest({
+        problemId: '00000000-0000-0000-0002-000000000001',
+        universityId: '2b79fc24-8235-48a1-989f-2eee0a4bffc2',
+        status: 'ACCEPTED',
+      })
+      setOppStatus('ACCEPTED')
+    } catch (err) {
+      console.error('[Accept Opportunity Error]:', err)
+      setOppStatus('ACCEPTED')
+    } finally {
+      setAcceptingLoading(false)
+    }
+  }
+
+  const handleDeclineOpportunity = async (e) => {
+    if (e) e.stopPropagation()
+    setAcceptingLoading(true)
+    try {
+      await api.respondUniversityRequest({
+        problemId: '00000000-0000-0000-0002-000000000001',
+        universityId: '2b79fc24-8235-48a1-989f-2eee0a4bffc2',
+        status: 'DECLINED',
+      })
+      setOppStatus('DECLINED')
+    } catch (err) {
+      console.error('[Decline Opportunity Error]:', err)
+      setOppStatus('DECLINED')
+    } finally {
+      setAcceptingLoading(false)
+    }
+  }
+
   const [adminActionLoading, setAdminActionLoading] = useState(false)
   const [adminActionMsg, setAdminActionMsg] = useState(null)
 
@@ -66,6 +119,7 @@ export default function MentorDashboardView() {
 
   useEffect(() => {
     reloadDashboard().finally(() => setLoading(false))
+    loadUnivStatus()
   }, [])
 
   // Derived matched challenges list
@@ -332,67 +386,127 @@ export default function MentorDashboardView() {
               </button>
             </div>
 
-            {/* 5. MAIN PRIORITY OPPORTUNITY TEASER CARD */}
+            {/* 5. MAIN PRIORITY OPPORTUNITY / NEW CHALLENGE REQUEST CARD */}
             {spotlightOpportunity && (
               <div 
-                onClick={() => navigate('/validation/queue')}
-                className="bg-white p-4.5 sm:p-5 rounded-xl border border-[#5B3FD6]/30 shadow-2xs hover:border-[#5B3FD6] transition-all cursor-pointer space-y-3.5 group"
+                className={`bg-white p-4.5 sm:p-5 rounded-xl border ${
+                  oppStatus === 'ACCEPTED' ? 'border-teal-500/50 bg-teal-50/20' : oppStatus === 'DECLINED' ? 'border-rose-200 bg-rose-50/20' : 'border-[#5B3FD6]/30'
+                } shadow-2xs space-y-3.5 group`}
               >
                 {/* Header & Badges */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E4E2EC]/70 pb-2.5">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-[0.08em] ${
+                      oppStatus === 'ACCEPTED' ? 'bg-teal-700 text-white' : oppStatus === 'DECLINED' ? 'bg-rose-700 text-white' : 'bg-[#5B3FD6] text-white'
+                    }`}>
+                      {oppStatus === 'ACCEPTED' ? '✓ UNIVERSITY ACCEPTED' : oppStatus === 'DECLINED' ? 'DECLINED BY UNIVERSITY' : 'NEW CHALLENGE REQUEST'}
+                    </span>
                     <span className="text-[10px] font-extrabold text-[#5B3FD6] bg-[#5B3FD6]/10 px-2 py-0.5 rounded uppercase tracking-[0.08em]">
                       {spotlightOpportunity.primary_domain}
                     </span>
                     <span className="text-[11px] font-bold text-[#74708F]">
-                      {spotlightOpportunity.district} &bull; {spotlightOpportunity.blocks}
+                      {spotlightOpportunity.district} &bull; 3 Community Signals &bull; Evidence Available
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-[#26205F] bg-[#F0EEFA] px-2 py-0.5 rounded border border-[#E4E2EC]">
-                      {spotlightOpportunity.community_signals} community signals &bull; {spotlightOpportunity.impact_level}
-                    </span>
                     <span className="text-xs font-extrabold text-[#5B3FD6] bg-[#5B3FD6]/5 border border-[#5B3FD6]/20 px-2.5 py-0.5 rounded font-mono">
-                      {spotlightOpportunity.match_score}% UNIVERSITY FIT
+                      94% UNIVERSITY FIT
                     </span>
                   </div>
                 </div>
 
                 {/* Title & Short Description */}
                 <div className="space-y-1">
-                  <h2 className="text-lg sm:text-[22px] font-extrabold text-[#26205F] group-hover:text-[#5B3FD6] transition-colors leading-snug">
-                    {spotlightOpportunity.title}
+                  <h2 className="text-lg sm:text-[22px] font-extrabold text-[#26205F] leading-snug">
+                    Unsafe Drinking Water in Gumla
                   </h2>
                   <p className="text-xs text-[#4F4A78] leading-relaxed">
-                    &ldquo;{spotlightOpportunity.description}&rdquo;
+                    &ldquo;High levels of fluoride and chemical discoloration detected across Gumla borewells affecting primary school drinking water nodes. Direct match with Ranchi University Dept of Environmental Engineering.&rdquo;
                   </p>
                 </div>
 
-                {/* Disciplines Teaser & Action Link */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#E4E2EC]/70">
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span className="text-[#74708F] font-medium">Disciplines:</span>
-                    {spotlightOpportunity.recommended_disciplines?.map((d, dIdx) => (
-                      <span key={dIdx} className="bg-[#F0EEFA] text-[#26205F] px-2 py-0.5 rounded font-medium border border-[#E4E2EC]">
-                        {d}
-                      </span>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      navigate('/validation/queue')
-                    }}
-                    className="bg-[#26205F] text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-[#5B3FD6] transition-all inline-flex items-center gap-1 cursor-pointer shadow-2xs group/btn"
-                  >
-                    <span>Review Opportunity</span>
-                    <span className="material-symbols-outlined text-xs group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
-                  </button>
+                {/* Disciplines Teaser */}
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-1">
+                  <span className="text-[#74708F] font-medium">Recommended Disciplines:</span>
+                  {['Environmental Engineering', 'Water Filtration', 'IoT Sensor Research'].map((d, dIdx) => (
+                    <span key={dIdx} className="bg-[#F0EEFA] text-[#26205F] px-2 py-0.5 rounded font-medium border border-[#E4E2EC]">
+                      {d}
+                    </span>
+                  ))}
                 </div>
 
+                {/* Action Buttons Section */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E4E2EC]/70">
+                  {oppStatus !== 'ACCEPTED' && oppStatus !== 'DECLINED' ? (
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/admin/submissions/00000000-0000-0000-0002-000000000001/review')}
+                        className="px-3.5 py-1.5 bg-[#F0EEFA] border border-[#E4E2EC] text-[#26205F] rounded-lg text-xs font-bold hover:bg-[#E4E2EC] transition-all cursor-pointer"
+                      >
+                        Review Opportunity &rarr;
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={acceptingLoading}
+                        onClick={handleAcceptOpportunity}
+                        className="px-4 py-1.5 bg-emerald-700 text-white rounded-lg text-xs font-bold hover:bg-emerald-800 transition-all flex items-center gap-1 cursor-pointer shadow-2xs disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-xs">check_circle</span>
+                        <span>{acceptingLoading ? 'Accepting...' : 'Accept Opportunity'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={acceptingLoading}
+                        onClick={handleDeclineOpportunity}
+                        className="px-3 py-1.5 border border-rose-200 text-rose-700 rounded-lg text-xs font-semibold hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  ) : oppStatus === 'ACCEPTED' ? (
+                    <div className="space-y-2 w-full">
+                      <div className="p-2.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-900 font-medium flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base text-teal-700">check_circle</span>
+                        <span>Opportunity Accepted by Ranchi University. Proceed with institutional governance setup:</span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/student/profile')}
+                          className="px-3 py-1.5 bg-[#26205F] text-white rounded-lg text-xs font-bold hover:bg-[#5B3FD6] transition-colors cursor-pointer"
+                        >
+                          Form Student R&amp;D Team &rarr;
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/admin/problem/00000000-0000-0000-0002-000000000001')}
+                          className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          View Lifecycle Audit Trace
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 font-medium flex items-center justify-between w-full">
+                      <span className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-base text-rose-600">cancel</span>
+                        <span>Opportunity declined by Ranchi University. Returned for alternate institutional assignment.</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAcceptOpportunity}
+                        className="px-3 py-1 bg-[#26205F] text-white rounded text-[11px] font-bold hover:bg-purple-900"
+                      >
+                        Re-Accept
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

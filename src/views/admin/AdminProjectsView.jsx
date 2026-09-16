@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { api } from '../lib/api'
+import { api } from '../../lib/api'
 
-export default function ProjectsView() {
+export default function AdminProjectsView() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +24,7 @@ export default function ProjectsView() {
         setProjects(res.projects)
       }
     } catch (err) {
-      console.warn('[ProjectsView Error]:', err.message)
+      console.warn('[AdminProjectsView Error]:', err.message)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -123,7 +123,7 @@ export default function ProjectsView() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold text-[#26205F] uppercase tracking-wider bg-purple-50 border border-purple-200/60 px-2.5 py-0.5 rounded-full">
-                PROJECT MONITORING
+                ADMIN PROJECT MONITORING
               </span>
               <span className="text-xs text-slate-500 font-medium">• Government Innovation Workspace</span>
             </div>

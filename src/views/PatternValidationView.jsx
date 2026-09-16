@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
 import { createChallengeDraft } from '../features/app/appSlice'
 import { api } from '../lib/api'
 import { JHARKHAND_DISTRICTS } from '../lib/geo'
 
 export default function PatternValidationView() {
+  const { id } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const reduxActivePattern = useSelector((state) => state.app.activeValidationPattern) || useSelector((state) => state.app.activePatternDetail)
@@ -27,22 +28,51 @@ export default function PatternValidationView() {
   const [objectives, setObjectives] = useState('Design scalable, low-cost field filtration unit using locally available materials capable of purifying 500L/day.')
   const [evalNotes, setEvalNotes] = useState('')
 
-  // Refresh cluster details if pattern ID is active
+  // Refresh cluster / submission details if ID parameter or activePattern is present
   useEffect(() => {
-    async function refreshCluster() {
-      if (!reduxActivePattern?.id) return
+    async function loadProblemData() {
+      const targetId = id || reduxActivePattern?.id
+      if (!targetId) return
       try {
-        const res = await api.getCluster(reduxActivePattern.id)
-        const cluster = res?.cluster || res?.clusters?.[0]
-        if (cluster) {
-          setActivePattern(cluster)
+        const [clusterRes, subsRes] = await Promise.allSettled([
+          api.getCluster(targetId),
+          api.getSubmissions(),
+        ])
+
+        let found = null
+        if (clusterRes.status === 'fulfilled' && (clusterRes.value?.cluster || clusterRes.value?.clusters?.[0])) {
+          found = clusterRes.value.cluster || clusterRes.value.clusters[0]
+        }
+
+        if (!found && subsRes.status === 'fulfilled' && subsRes.value?.submissions) {
+          const matchingSub = subsRes.value.submissions.find((s) => s.id === targetId || s.ref_id === targetId)
+          if (matchingSub) {
+            found = {
+              id: matchingSub.id,
+              title: matchingSub.ai_summary || matchingSub.raw_text,
+              description: matchingSub.raw_text || matchingSub.ai_summary,
+              primary_domain: matchingSub.domain || 'Water & Sanitation',
+              district: matchingSub.district || 'Gumla',
+              locations: [`${matchingSub.district || 'Gumla'}, Jharkhand`],
+              problem_count: matchingSub.similar_count || 1,
+              avg_severity: matchingSub.severity_score || 8.0,
+              photos: matchingSub.evidence_urls || [],
+              submission_channel: matchingSub.submission_channel || 'text',
+              raw_text: matchingSub.raw_text,
+              ai_summary: matchingSub.ai_summary,
+            }
+          }
+        }
+
+        if (found) {
+          setActivePattern(found)
         }
       } catch (err) {
-        console.warn('[PatternValidationView] Could not refresh cluster details:', err.message)
+        console.warn('[PatternValidationView] Could not load problem details:', err.message)
       }
     }
-    refreshCluster()
-  }, [reduxActivePattern?.id])
+    loadProblemData()
+  }, [id, reduxActivePattern?.id])
 
   const patternTitle = activePattern?.title || activePattern?.name || 'Unsafe Drinking Water in Gumla'
   const patternDomain = activePattern?.primary_domain || activePattern?.primaryDomain || 'WATER & SANITATION'
@@ -71,14 +101,15 @@ export default function PatternValidationView() {
   // Deduplicate photo URLs
   const photos = Array.from(new Set(rawPhotos))
 
-  // Validate & Convert to Challenge
-  const handleValidateAndCreateChallenge = async () => {
+  // Validate Problem & Continue to University Matching
+  const handleValidateAndContinueToMatching = async () => {
     setValidating(true)
     setError(null)
+    const targetId = id || activePattern?.id || '00000000-0000-0000-0002-000000000001'
     try {
-      if (activePattern?.id) {
+      if (activePattern?.id || id) {
         await api.validateCluster({
-          cluster_id: activePattern.id,
+          cluster_id: targetId,
           action: 'VALIDATE',
           measurable_objectives: objectives,
           notes: `${feasibility} | Dept: ${department} | ${evalNotes}`,
@@ -95,19 +126,15 @@ export default function PatternValidationView() {
         targetDepartment: department,
       }))
 
-      setValidatedSuccess(true)
+      // Navigate directly to Admin University Matching Workspace
+      navigate(`/admin/problem/${targetId}/matching`, {
+        state: { title: patternTitle, domain: patternDomain, district }
+      })
     } catch (err) {
-      console.warn('[Validation Warning, proceeding with draft creation]:', err.message)
-      dispatch(createChallengeDraft({
-        ...activePattern,
-        title: patternTitle,
-        primaryDomain: patternDomain,
-        locations: activePattern?.locations || [`${district}, Jharkhand`],
-        problemStatement: activePattern?.description || `High levels of fluoride and heavy metals detected in village borewells across ${district}.`,
-        objectives: objectives,
-        targetDepartment: department,
-      }))
-      setValidatedSuccess(true)
+      console.warn('[Validation Warning, proceeding to university matching]:', err.message)
+      navigate(`/admin/problem/${targetId}/matching`, {
+        state: { title: patternTitle, domain: patternDomain, district }
+      })
     } finally {
       setValidating(false)
     }
@@ -115,154 +142,151 @@ export default function PatternValidationView() {
 
   const handleDeclineOpportunity = async () => {
     setValidating(true)
+    const targetId = id || activePattern?.id || '00000000-0000-0000-0002-000000000001'
     try {
-      if (activePattern?.id) {
+      if (targetId) {
         await api.validateCluster({
-          cluster_id: activePattern.id,
+          cluster_id: targetId,
           action: 'REJECT',
-          notes: 'Declined by mentor evaluation',
+          notes: 'Declined by administrative evaluation',
         })
       }
-      navigate('/validation/queue')
+      navigate('/admin/submissions')
     } catch (err) {
-      navigate('/validation/queue')
+      navigate('/admin/submissions')
     } finally {
       setValidating(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F7FC] flex flex-col font-sans text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900">
-      <main className="flex-grow pt-6 pb-24 px-4 sm:px-6 max-w-[1180px] mx-auto w-full space-y-7">
-
-        {/* 1. TOP NAVIGATION */}
-        <div>
+    <div className="space-y-6 text-slate-800 pb-8">
+      {/* 1. TOP NAVIGATION & BREADCRUMB */}
+      <div className="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           <button
             type="button"
-            onClick={() => navigate('/validation/queue')}
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[#171A5A] hover:text-indigo-700 transition-colors cursor-pointer"
+            onClick={() => navigate('/admin/submissions')}
+            className="hover:text-[#26205F] font-bold cursor-pointer transition-colors flex items-center gap-1 text-xs"
           >
-            <span className="text-base">←</span>
-            <span>Back to Opportunities</span>
+            <span>&larr; Back to Review Queue</span>
           </button>
+          <span>/</span>
+          <span className="font-mono text-[#26205F] font-bold text-xs">
+            {id || activePattern?.id ? (id || activePattern.id).slice(0, 18) : 'Problem Review'}
+          </span>
         </div>
 
-        {/* AFTER VALIDATION SUCCESS / TRANSITION STATE */}
-        {validatedSuccess ? (
-          <div className="bg-white p-7 sm:p-10 rounded-xl border border-emerald-200/90 shadow-[0_2px_10px_rgba(20,24,80,0.04)] text-center space-y-7 max-w-2xl mx-auto my-8">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
-              <span className="material-symbols-outlined text-2xl">check_circle</span>
-            </div>
+        <button
+          type="button"
+          onClick={() => navigate('/admin/submissions')}
+          className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer shrink-0 shadow-2xs"
+        >
+          Return to Queue
+        </button>
+      </div>
 
-            <div className="space-y-2 max-w-lg mx-auto">
-              <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-3 py-1 rounded-md border border-emerald-200/80 inline-block">
-                INNOVATION CHALLENGE READY
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#171A5A] leading-tight">
-                {patternTitle}
-              </h1>
-              <p className="text-[15px] leading-[1.65] text-[#333E5D]">
-                The validated community problem has been converted into an Innovation Challenge for student and faculty teams.
-              </p>
-            </div>
+      {/* AFTER VALIDATION SUCCESS / TRANSITION STATE */}
+      {validatedSuccess ? (
+        <div className="bg-white p-8 sm:p-10 rounded-2xl border border-emerald-200 shadow-2xs text-center space-y-6 max-w-2xl mx-auto my-8">
+          <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
+            <span className="material-symbols-outlined text-3xl">check_circle</span>
+          </div>
 
-            {/* REFINED WORKFLOW LIFECYCLE */}
-            <div className="bg-[#FAF8F5] p-4.5 rounded-xl border border-stone-200/80 max-w-xl mx-auto space-y-3">
-              <div className="flex flex-wrap items-center justify-between text-[13px] font-medium text-slate-700 gap-2">
-                <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                  <span>Community Signal</span>
-                  <span className="text-emerald-600 font-bold">✓</span>
-                </div>
-                <span className="text-slate-300">→</span>
-                <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                  <span>Emerging Pattern</span>
-                  <span className="text-emerald-600 font-bold">✓</span>
-                </div>
-                <span className="text-slate-300">→</span>
-                <div className="flex items-center gap-1 text-emerald-800 font-semibold">
-                  <span>University Validation</span>
-                  <span className="text-emerald-600 font-bold">✓</span>
-                </div>
-                <span className="text-slate-300">→</span>
-                <div className="bg-[#171A5A] text-white px-2.5 py-1 rounded-md text-[12px] font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <span>Challenge Ready</span>
-                </div>
-                <span className="text-slate-300">→</span>
-                <div className="text-slate-400 text-[12.5px]">
-                  Publish to Students
-                </div>
+          <div className="space-y-2 max-w-lg mx-auto">
+            <span className="text-[10px] font-mono font-extrabold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block">
+              INNOVATION CHALLENGE READY
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {patternTitle}
+            </h1>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              The validated community problem has been converted into an Innovation Challenge for student and faculty teams.
+            </p>
+          </div>
+
+          {/* REFINED WORKFLOW LIFECYCLE */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-xl mx-auto space-y-3">
+            <div className="flex flex-wrap items-center justify-between text-xs font-semibold text-slate-700 gap-2">
+              <div className="flex items-center gap-1 text-emerald-800">
+                <span>Community Signal</span>
+                <span className="text-emerald-600 font-bold">✓</span>
               </div>
-
-              {/* HELPFUL CONTEXT LINE */}
-              <p className="text-[12.5px] text-[#525B75] italic pt-1 border-t border-stone-200/60">
-                Review the challenge details before publishing it to student innovators.
-              </p>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-1">
-              <button
-                type="button"
-                onClick={() => navigate('/challenge/formation')}
-                className="bg-[#171A5A] text-white px-7 py-3.5 rounded-xl text-[14px] font-bold hover:bg-indigo-900 transition-all duration-200 shadow-sm hover:shadow hover:-translate-y-0.5 inline-flex items-center gap-2 cursor-pointer"
-              >
-                <span>Review & Publish Challenge →</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/validation/queue')}
-                className="bg-white border border-stone-200 text-[#171A5A] px-5 py-3.5 rounded-xl text-[13.5px] font-medium hover:bg-stone-50 transition-colors cursor-pointer"
-              >
-                View Opportunities
-              </button>
+              <span className="text-slate-300">→</span>
+              <div className="flex items-center gap-1 text-emerald-800">
+                <span>Emerging Pattern</span>
+                <span className="text-emerald-600 font-bold">✓</span>
+              </div>
+              <span className="text-slate-300">→</span>
+              <div className="flex items-center gap-1 text-emerald-800">
+                <span>Admin Validation</span>
+                <span className="text-emerald-600 font-bold">✓</span>
+              </div>
+              <span className="text-slate-300">→</span>
+              <div className="bg-[#26205F] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Challenge Ready</span>
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="space-y-7">
 
-            {/* ==================================================
-                TOP PROBLEM HEADER
-               ================================================== */}
-            <header className="bg-white p-6 sm:p-7 rounded-xl border border-[rgba(20,24,80,0.10)] shadow-[0_2px_10px_rgba(20,24,80,0.04)]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                <div className="space-y-2">
-                  {/* Category / Domain Tag */}
-                  <div className="text-[12px] font-semibold text-[#525B75] uppercase tracking-wider">
-                    {patternDomain}
-                  </div>
+          {/* ACTION BUTTONS */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/challenges')}
+              className="bg-[#26205F] text-white px-6 py-3 rounded-xl text-xs font-bold hover:bg-[#1C1748] transition-all shadow-2xs cursor-pointer inline-flex items-center gap-2"
+            >
+              <span>Inspect Challenge Details &rarr;</span>
+            </button>
 
-                  {/* Problem Title */}
-                  <h1 className="text-[26px] sm:text-[30px] font-bold text-[#171A5A] tracking-[-0.02em] leading-[1.25]">
-                    {patternTitle}
-                  </h1>
-
-                  {/* Location & Metadata Line */}
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[14px] text-[#525B75] font-medium pt-0.5">
-                    <span className="font-semibold text-[#171A5A]">{district} District</span>
-                    <span>·</span>
-                    <span>{blocksText}</span>
-                    <span>·</span>
-                    <span className="text-[#171A5A] font-semibold">{signalCount} community signals</span>
-                    <span>·</span>
-                    <span className="text-amber-800 font-semibold bg-amber-50/90 px-2.5 py-0.5 rounded text-[12px] border border-amber-200/80">
-                      {impact}
-                    </span>
-                  </div>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/signals')}
+              className="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              View Signals Queue
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* TOP PROBLEM HEADER */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="text-[10px] font-mono font-extrabold text-[#26205F] uppercase tracking-wider">
+                  {patternDomain}
                 </div>
 
-                {/* University Fit Score Badge */}
-                <div className="bg-[#FAF8F5] border border-stone-200/80 rounded-xl px-5 py-3 text-center shrink-0 self-start sm:self-auto min-w-[140px]">
-                  <div className="text-[24px] font-bold text-[#171A5A] leading-none">
-                    {fitScore}%
-                  </div>
-                  <div className="text-[11px] font-semibold text-[#525B75] tracking-wider mt-1.5 uppercase">
-                    UNIVERSITY FIT
-                  </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
+                  {patternTitle}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 font-medium">
+                  <span className="font-bold text-slate-800">{district} District</span>
+                  <span>•</span>
+                  <span>{blocksText}</span>
+                  <span>•</span>
+                  <span className="text-[#26205F] font-mono font-bold">{signalCount} Community Reports</span>
+                  <span>•</span>
+                  <span className="text-amber-800 font-bold bg-amber-50 px-2.5 py-0.5 rounded-full text-[10px] border border-amber-200">
+                    {impact}
+                  </span>
                 </div>
               </div>
-            </header>
+
+              {/* Fit Score Badge */}
+              <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-4 text-center shrink-0 self-start sm:self-auto min-w-[140px]">
+                <div className="text-2xl font-extrabold text-[#26205F] font-mono leading-none">
+                  {fitScore}%
+                </div>
+                <div className="text-[10px] font-extrabold text-slate-500 tracking-wider mt-1.5 uppercase">
+                  UNIVERSITY FIT
+                </div>
+              </div>
+            </div>
+          </div>
 
             {error && (
               <div className="p-4 bg-red-50 text-red-900 text-[14px] rounded-lg border border-red-200 flex items-center gap-2">
@@ -765,18 +789,18 @@ export default function PatternValidationView() {
                     <div className="pt-2 space-y-3">
                       <button
                         type="button"
-                        onClick={handleValidateAndCreateChallenge}
+                        onClick={handleValidateAndContinueToMatching}
                         disabled={validating}
-                        className="w-full bg-[#171A5A] text-white py-3.5 px-4 rounded-xl font-semibold text-[14px] hover:bg-indigo-900 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="w-full bg-[#26205F] text-white py-3.5 px-4 rounded-xl font-bold text-xs hover:bg-[#1C1748] transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {validating ? (
                           <>
                             <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-                            <span>Validating...</span>
+                            <span>Validating Problem...</span>
                           </>
                         ) : (
                           <>
-                            <span>ACCEPT OPPORTUNITY & CREATE CHALLENGE →</span>
+                            <span>Validate Problem &amp; Continue to University Matching &rarr;</span>
                           </>
                         )}
                       </button>
@@ -788,7 +812,7 @@ export default function PatternValidationView() {
                           disabled={validating}
                           className="hover:text-red-700 cursor-pointer transition-colors"
                         >
-                          Decline Opportunity
+                          Reject / Archive
                         </button>
                         <span>·</span>
                         <button
@@ -797,7 +821,7 @@ export default function PatternValidationView() {
                           disabled={validating}
                           className="hover:text-slate-900 cursor-pointer transition-colors"
                         >
-                          Archive
+                          Request Information
                         </button>
                       </div>
                     </div>
@@ -810,8 +834,6 @@ export default function PatternValidationView() {
 
           </div>
         )}
-
-      </main>
 
       {/* LIGHTBOX MODAL FOR CITIZEN EVIDENCE PHOTOS */}
       {lightboxIndex !== null && photos.length > 0 && (
@@ -872,3 +894,4 @@ export default function PatternValidationView() {
     </div>
   )
 }
+
