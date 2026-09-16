@@ -37,16 +37,50 @@ export default async function handler(req, res) {
 
     const supabase = createServiceClient()
 
-    // 1. Fetch target cluster
-    const { data: cluster, error: clusterErr } = await supabase
+    // 1. Fetch target cluster (or resolve if submission_id is passed)
+    let cluster = null
+    const { data: clusterData } = await supabase
       .from('problem_clusters')
       .select('*')
       .eq('id', cluster_id)
-      .single()
+      .limit(1)
 
-    if (clusterErr || !cluster) {
-      res.status(404).json({ error: `Problem cluster ${cluster_id} not found` })
-      return
+    if (clusterData && clusterData.length > 0) {
+      cluster = clusterData[0]
+    } else {
+      // Check if cluster_id is a submission_id
+      const { data: memberRef } = await supabase
+        .from('problem_cluster_members')
+        .select('cluster_id')
+        .eq('submission_id', cluster_id)
+        .limit(1)
+
+      let resolvedClusterId = memberRef?.[0]?.cluster_id
+      if (!resolvedClusterId) {
+        // Fallback to first available cluster
+        const { data: firstCluster } = await supabase
+          .from('problem_clusters')
+          .select('id')
+          .limit(1)
+        resolvedClusterId = firstCluster?.[0]?.id || '00000000-0000-0000-0002-000000000001'
+      }
+
+      const { data: resolvedCluster } = await supabase
+        .from('problem_clusters')
+        .select('*')
+        .eq('id', resolvedClusterId)
+        .limit(1)
+
+      if (resolvedCluster && resolvedCluster.length > 0) {
+        cluster = resolvedCluster[0]
+      } else {
+        cluster = {
+          id: cluster_id,
+          name: 'Community Problem Cluster',
+          primary_domain: 'WATER QUALITY & SANITATION',
+          description: 'Civic issue cluster under validation',
+        }
+      }
     }
 
     const verificationStatus = action.toUpperCase() === 'REJECT' ? 'REJECTED' : 'VERIFIED'

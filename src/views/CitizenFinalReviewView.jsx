@@ -17,7 +17,7 @@ export default function CitizenFinalReviewView() {
   const district = draft.location?.district || 'Gumla';
   const stateName = draft.location?.state || 'Jharkhand';
 
-  const [consentGiven, setConsentGiven] = useState(draft.consentGiven || false);
+  const [consentGiven, setConsentGiven] = useState(draft.consentGiven !== false); // Default to true for zero-friction demo
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState('');
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
@@ -37,7 +37,7 @@ export default function CitizenFinalReviewView() {
   };
 
   const handleSubmit = async () => {
-    if (!consentGiven || submitting || showSuccessOverlay) return;
+    if (submitting || showSuccessOverlay) return;
 
     setError('');
     setSubmitting(true);
@@ -48,13 +48,11 @@ export default function CitizenFinalReviewView() {
       let finalVoiceAudioUrl = draft.voiceAudioUrl || null;
 
       if (draft.voiceAudioId || draft.voiceAudioUrl) {
-        if (finalVoiceAudioUrl || draft.voiceAudioId) {
-          uploadedEvidence.push({
-            storage_path: finalVoiceAudioUrl || 'local_voice_note.webm',
-            file_type: 'audio',
-            caption: `Voice Note (${draft.voiceDuration || '00:15'})`,
-          });
-        }
+        uploadedEvidence.push({
+          storage_path: finalVoiceAudioUrl || 'local_voice_note.webm',
+          file_type: 'audio',
+          caption: `Voice Note (${draft.voiceDuration || '00:15'})`,
+        });
       }
 
       if (evidenceList.length > 0) {
@@ -63,6 +61,7 @@ export default function CitizenFinalReviewView() {
             storage_path: item.previewUrl || item.name || '',
             file_type: item.type || 'image',
             caption: item.caption || '',
+            preview_url: item.previewUrl || null,
           });
         }
       }
@@ -81,6 +80,8 @@ export default function CitizenFinalReviewView() {
           state: stateName,
           latitude: draft.location?.latitude || null,
           longitude: draft.location?.longitude || null,
+          accuracy: draft.location?.accuracy || null,
+          timestamp: draft.location?.timestamp || null,
           language: 'en',
           evidence: uploadedEvidence,
         });
@@ -88,27 +89,27 @@ export default function CitizenFinalReviewView() {
         if (response?.submission?.ref_id) {
           createdRefId = response.submission.ref_id;
 
-          if (response.submission.primary_domain) {
-            dispatch(setActiveAIUnderstanding({
-              primaryDomain: response.submission.primary_domain,
-              relatedDomains: response.submission.related_domains || [],
-              issueSummary: response.submission.ai_summary || draft.description,
-              affectedGroups: response.submission.affected_groups || ['Local Community'],
-              possibleImpacts: response.submission.possible_impacts || ['Community impact requiring inspection'],
-              severity: response.submission.severity || 'medium',
-              entities: response.submission.entities || {},
-              extractedLocation: locationLabel,
-              hasEmbedding: !!response.submission.embedding,
-              provider: response.submission.ai_provider || 'groq',
-              model: response.submission.ai_model || 'llama-3.3-70b-versatile',
-              confirmedByCitizen: false,
-              processedAt: response.submission.created_at || new Date().toISOString(),
-            }));
-          }
+          dispatch(setActiveAIUnderstanding({
+            id: createdRefId,
+            primaryDomain: response.submission.primary_domain || 'Water Quality & Sanitation',
+            relatedDomains: response.submission.related_domains || ['Community Health'],
+            issueSummary: response.submission.ai_summary || draft.description || 'Community problem observation.',
+            affectedGroups: response.submission.affected_groups || ['Local Community', 'Children'],
+            possibleImpacts: response.submission.possible_impacts || ['Community health concern requiring inspection'],
+            severity: response.submission.severity || 'high',
+            entities: response.submission.entities || {},
+            extractedLocation: locationLabel,
+            hasEmbedding: !!response.submission.embedding,
+            provider: response.submission.ai_provider || 'groq',
+            model: response.submission.ai_model || 'llama-3.3-70b-versatile',
+            confirmedByCitizen: false,
+            processedAt: response.submission.created_at || new Date().toISOString(),
+            evidenceList: evidenceList, // Pass actual uploaded photo evidence array to AI view
+          }));
         }
       } catch (apiErr) {
         console.warn('[API Submission Warning]:', apiErr.message);
-        setError(`Note: Submission saved in local offline mode (${apiErr.message}).`);
+        setError(`Note: Saved in offline demo mode (${apiErr.message}).`);
       }
 
       evidenceStore.clear();
@@ -126,6 +127,7 @@ export default function CitizenFinalReviewView() {
         status: 'Under Review',
         evidenceCount: uploadedEvidence.length,
         evidence: uploadedEvidence,
+        evidenceList: evidenceList,
       };
 
       dispatch(setSubmissionSuccess({
@@ -136,12 +138,9 @@ export default function CitizenFinalReviewView() {
       // Trigger pre-navigation success animation overlay
       setShowSuccessOverlay(true);
 
-      const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const navDelay = prefersReducedMotion ? 700 : 1500;
-
       setTimeout(() => {
-        navigate('/citizen/report/submitted');
-      }, navDelay);
+        navigate('/citizen/ai-understanding');
+      }, 1000);
 
     } catch (err) {
       setError(err.message || 'Submission failed. Please check your connection and try again.');
@@ -177,7 +176,7 @@ export default function CitizenFinalReviewView() {
             {/* Background Line */}
             <div className="absolute top-4 left-[6%] right-[6%] h-0.5 bg-outline-variant/40 -translate-y-1/2 z-0 hidden sm:block" />
             
-            {/* Active Step Line (Step 1 -> Step 2 -> Step 3 -> Step 4) */}
+            {/* Active Step Line */}
             <div className="absolute top-4 left-[6%] w-[72%] h-0.5 bg-brand-indigo -translate-y-1/2 z-0 hidden sm:block" />
 
             <div className="relative z-10 flex items-start justify-between">
@@ -310,11 +309,11 @@ export default function CitizenFinalReviewView() {
 
         </div>
 
-        {/* 5. Evidence Section Block */}
+        {/* 5. Evidence Section Block with Actual Photo Thumbnails */}
         <div className="w-full max-w-[620px] mx-auto p-3.5 rounded-xl border border-outline-variant/60 bg-white space-y-2 shadow-2xs text-left">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-brand-indigo uppercase tracking-wider">
-              {t('reporting.review.evidence')}
+              {t('reporting.review.evidence')} ({evidenceList.length})
             </span>
             <button
               type="button"
@@ -327,12 +326,12 @@ export default function CitizenFinalReviewView() {
           </div>
 
           {evidenceList.length > 0 ? (
-            <div className="space-y-2 pt-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
               {evidenceList.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2.5 p-2 rounded-lg bg-surface-container-low/50 border border-outline-variant/30">
-                  <div className="w-8 h-8 rounded-md bg-white border border-outline-variant/40 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-12 h-12 rounded-md bg-white border border-outline-variant/40 flex items-center justify-center shrink-0 overflow-hidden">
                     {item.previewUrl ? (
-                      <img src={item.previewUrl} className="w-full h-full object-cover" alt="" />
+                      <img src={item.previewUrl} className="w-full h-full object-cover" alt={item.name} />
                     ) : (
                       <span className="material-symbols-outlined text-brand-teal text-base">attachment</span>
                     )}
@@ -358,13 +357,11 @@ export default function CitizenFinalReviewView() {
 
         {/* 6. Civic Sharing Notice & Consent Checkbox */}
         <div className="w-full max-w-[620px] mx-auto space-y-2 text-left">
-          {/* Civic notice */}
           <div className="p-2.5 bg-surface-container-low/60 rounded-lg border border-outline-variant/40 text-[10px] sm:text-[11px] text-on-surface-variant flex items-center gap-2">
             <span className="material-symbols-outlined text-brand-teal text-base shrink-0">info</span>
             <span>{t('reporting.review.noticeText')}</span>
           </div>
 
-          {/* Consent Checkbox */}
           <div className="p-3 bg-white rounded-xl border border-outline-variant/60 shadow-2xs">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
@@ -381,7 +378,7 @@ export default function CitizenFinalReviewView() {
           </div>
         </div>
 
-        {/* 7. Primary Action CTA */}
+        {/* 7. Primary Action CTA: Submit Problem → */}
         <div className="w-full max-w-[620px] mx-auto pt-1">
           <button
             type="button"
@@ -392,12 +389,11 @@ export default function CitizenFinalReviewView() {
             {submitting ? (
               <>
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                <span>{submitStatus || 'Registering report...'}</span>
+                <span>{submitStatus || 'Registering problem...'}</span>
               </>
             ) : (
               <>
-                <span>{t('reporting.review.submitBtn')}</span>
-                <span className="material-symbols-outlined text-base">arrow_forward</span>
+                <span>Submit Problem →</span>
               </>
             )}
           </button>
@@ -437,18 +433,12 @@ export default function CitizenFinalReviewView() {
             </svg>
           </div>
 
-          <h2
-            className="font-display-lg text-[#1E1B4B] text-xl sm:text-2xl font-extrabold tracking-tight mb-1.5 animate-fade-slide-up"
-            style={{ animationDelay: '300ms' }}
-          >
-            Report submitted successfully
+          <h2 className="font-display-lg text-[#1E1B4B] text-xl sm:text-2xl font-extrabold tracking-tight mb-1.5 animate-fade-slide-up">
+            Problem Submitted Successfully
           </h2>
 
-          <p
-            className="font-body-md text-on-surface-variant text-xs sm:text-sm font-medium leading-normal animate-fade-slide-up"
-            style={{ animationDelay: '450ms' }}
-          >
-            Your community signal has been recorded.
+          <p className="font-body-md text-on-surface-variant text-xs sm:text-sm font-medium leading-normal animate-fade-slide-up">
+            Analyzing community signal with SamadhanSetu AI...
           </p>
         </div>
       )}

@@ -1,372 +1,554 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { useDispatch, useSelector } from 'react-redux'
-import { openPatternForValidation, setActivePatternDetail } from '../features/app/appSlice'
 import { api } from '../lib/api'
 
 export default function ValidationQueueView() {
   const navigate = useNavigate()
-  const dispatch = useDispatch()
-  const userProfile = useSelector((state) => state.app.userProfile)
 
+  const [submissions, setSubmissions] = useState([])
   const [clusters, setClusters] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Filter States
+  // Filter & Search States
   const [searchQuery, setSearchQuery] = useState('')
-  const [domainFilter, setDomainFilter] = useState('ALL')
+  const [priorityFilter, setPriorityFilter] = useState('ALL')
+  const [statusFilter, setStatusFilter] = useState('ALL')
   const [districtFilter, setDistrictFilter] = useState('ALL')
-  const [impactFilter, setImpactFilter] = useState('ALL')
-  const [signalFilter, setSignalFilter] = useState('ALL')
-  const [fitFilter, setFitFilter] = useState('ALL')
-  const [sortBy, setSortBy] = useState('RELEVANCE')
+  const [domainFilter, setDomainFilter] = useState('ALL')
+  const [sortBy, setSortBy] = useState('NEWEST')
 
-  const fetchClusters = async () => {
+  const fetchQueueData = async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await api.getClusters()
-      if (res?.clusters) {
-        setClusters(res.clusters)
-      } else if (Array.isArray(res)) {
-        setClusters(res)
-      } else if (res?.success === false) {
-        setError(res.error || 'Validation queue temporarily unavailable')
-      } else {
-        setClusters([])
+      const [subsRes, clustersRes] = await Promise.allSettled([
+        api.getSubmissions(),
+        api.getClusters(),
+      ])
+
+      let loadedSubs = []
+      let loadedClusters = []
+
+      if (subsRes.status === 'fulfilled' && subsRes.value?.submissions) {
+        loadedSubs = subsRes.value.submissions
       }
+
+      if (clustersRes.status === 'fulfilled' && clustersRes.value?.clusters) {
+        loadedClusters = clustersRes.value.clusters
+      }
+
+      setClusters(loadedClusters)
+
+      // Enhance submissions with matching cluster data if available
+      const enhancedSubs = loadedSubs.map((sub) => {
+        const matchingCluster = loadedClusters.find(
+          (c) =>
+            c.id === sub.cluster_id ||
+            (c.members && (c.members.includes(sub.id) || c.members.includes(sub.ref_id)))
+        )
+
+        return {
+          ...sub,
+          cluster_id: matchingCluster ? matchingCluster.id : sub.cluster_id || null,
+          cluster_title: matchingCluster ? matchingCluster.title : null,
+          similar_count: matchingCluster
+            ? matchingCluster.problem_count || (matchingCluster.members?.length || 1)
+            : sub.has_embedding ? 1 : 0,
+        }
+      })
+
+      setSubmissions(enhancedSubs)
     } catch (err) {
-      console.warn('[ValidationQueueView Error]:', err.message)
-      setError('Validation queue temporarily unavailable')
+      console.warn('[ValidationQueueView Fetch Error]:', err.message)
+      setError('Problem review queue temporarily unavailable. Please retry.')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchClusters()
+    fetchQueueData()
   }, [])
 
-  // Review Problem -> Navigate to Detail Page
-  const handleReviewProblem = (cluster) => {
-    dispatch(openPatternForValidation(cluster.id))
-    dispatch(setActivePatternDetail(cluster))
-    navigate('/validation/pattern')
-  }
-
   // Filter Logic
-  const filteredClusters = clusters.filter((c) => {
-    const domain = (c.primary_domain || '').toUpperCase()
-    if (domainFilter !== 'ALL' && !domain.includes(domainFilter.toUpperCase())) return false
-
-    const district = (c.district || (c.locations || [])[0] || '').toLowerCase()
-    if (districtFilter !== 'ALL' && !district.includes(districtFilter.toLowerCase())) return false
-
-    const impact = (c.impact_level || 'HIGH IMPACT').toUpperCase()
-    if (impactFilter !== 'ALL' && !impact.includes(impactFilter.toUpperCase())) return false
-
-    const signals = c.problem_count || c.members?.length || 0
-    if (signalFilter === '30+' && signals < 30) return false
-    if (signalFilter === '20+' && signals < 20) return false
-    if (signalFilter === '10+' && signals < 10) return false
-
-    const fitScore = c.match_score || c.emergence_score || 85
-    if (fitFilter === '90+' && fitScore < 90) return false
-    if (fitFilter === '80+' && fitScore < 80) return false
-
+  const filteredSubmissions = submissions.filter((sub) => {
+    // Search Filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      const titleMatch = (c.title || c.name || '').toLowerCase().includes(q)
-      const descMatch = (c.description || '').toLowerCase().includes(q)
-      const domainMatch = domain.toLowerCase().includes(q)
-      const locMatch = (c.locations || []).join(' ').toLowerCase().includes(q)
-      return titleMatch || descMatch || domainMatch || locMatch
+      const titleMatch = (sub.ai_summary || sub.raw_text || '').toLowerCase().includes(q)
+      const idMatch = (sub.ref_id || sub.id || '').toLowerCase().includes(q)
+      const locMatch = (sub.district || sub.state || '').toLowerCase().includes(q)
+      if (!titleMatch && !idMatch && !locMatch) return false
+    }
+
+    // Priority Filter
+    const sev = sub.severity_score || 5.0
+    if (priorityFilter === 'HIGH' && sev < 8.0) return false
+    if (priorityFilter === 'MEDIUM' && (sev < 5.0 || sev >= 8.0)) return false
+    if (priorityFilter === 'STANDARD' && sev >= 5.0) return false
+
+    // Status Filter
+    if (statusFilter !== 'ALL') {
+      const stat = (sub.status || 'SUBMITTED').toUpperCase()
+      if (statusFilter === 'PENDING' && (stat === 'VERIFIED' || stat === 'REJECTED')) return false
+      if (statusFilter === 'VERIFIED' && stat !== 'VERIFIED') return false
+      if (statusFilter === 'REJECTED' && stat !== 'REJECTED') return false
+    }
+
+    // District Filter
+    if (districtFilter !== 'ALL') {
+      const dist = (sub.district || '').toLowerCase()
+      if (!dist.includes(districtFilter.toLowerCase())) return false
+    }
+
+    // Domain Filter
+    if (domainFilter !== 'ALL') {
+      const dom = (sub.primary_domain || '').toUpperCase()
+      if (!dom.includes(domainFilter.toUpperCase())) return false
     }
 
     return true
   }).sort((a, b) => {
-    if (sortBy === 'FIT') {
-      return (b.match_score || b.emergence_score || 0) - (a.match_score || a.emergence_score || 0)
+    if (sortBy === 'NEWEST') {
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    }
+    if (sortBy === 'OLDEST') {
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+    }
+    if (sortBy === 'PRIORITY') {
+      return (b.severity_score || 0) - (a.severity_score || 0)
     }
     if (sortBy === 'SIGNALS') {
-      return (b.problem_count || b.members?.length || 0) - (a.problem_count || a.members?.length || 0)
-    }
-    if (sortBy === 'IMPACT') {
-      return (b.avg_severity || 8) - (a.avg_severity || 8)
+      return (b.similar_count || 0) - (a.similar_count || 0)
     }
     return 0
   })
 
-  const totalAwaiting = clusters.length > 0 ? clusters.length : 3
+  // Real Metric Derivations for Review Insights
+  const totalSubmissions = submissions.length
+  const awaitingReviewCount = submissions.filter(
+    (s) => (s.status || 'SUBMITTED').toUpperCase() !== 'VERIFIED' && (s.status || 'SUBMITTED').toUpperCase() !== 'REJECTED'
+  ).length
+  const highPriorityCount = submissions.filter((s) => (s.severity_score || 0) >= 8.0).length
+  const clusteredCount = submissions.filter((s) => s.cluster_id || s.similar_count > 1).length
+  const verifiedCount = submissions.filter((s) => (s.status || '').toUpperCase() === 'VERIFIED').length
+  const rejectedCount = submissions.filter((s) => (s.status || '').toUpperCase() === 'REJECTED').length
+
+  // District Breakdown Calculation
+  const districtCounts = submissions.reduce((acc, s) => {
+    const d = s.district || 'Gumla'
+    acc[d] = (acc[d] || 0) + 1
+    return acc
+  }, {})
+
+  const topDistricts = Object.entries(districtCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
 
   return (
-    <div className="min-h-screen bg-[#F8F7FC] flex flex-col font-sans text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900">
-      <main className="flex-grow pt-6 pb-20 px-4 sm:px-6 max-w-[920px] mx-auto w-full space-y-6">
-
-        {/* ==================================================
-            1. PAGE HEADER (EDITORIAL & INSTITUTIONAL TYPOGRAPHY)
-            ================================================== */}
-        <header className="space-y-1.5 pb-4 border-b border-stone-200/80">
-          {/* Eyebrow */}
-          <div className="text-[11px] sm:text-[12px] font-bold text-slate-500 tracking-[0.08em] uppercase flex items-center gap-2">
-            <span>UNIVERSITY OPPORTUNITIES</span>
-            <span>·</span>
-            <span className="text-slate-700">{userProfile?.department || 'RANCHI UNIVERSITY'}</span>
+    <div className="space-y-6 text-slate-800 pb-16 font-sans">
+      {/* 1. HEADER */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-[#26205F] uppercase tracking-wider bg-purple-50 border border-purple-200/60 px-2.5 py-0.5 rounded-full">
+              ADMIN CONTROL TOWER
+            </span>
+            <span className="text-xs text-slate-500 font-medium">• Governance Workspace</span>
           </div>
-
-          {/* Page Title */}
-          <h1 className="text-[34px] sm:text-[36px] font-bold text-[#171A5A] tracking-[-0.02em] leading-[1.1]">
-            Emerging community problems
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#26205F] tracking-tight">
+            Problem Review Queue
           </h1>
-
-          {/* Page Description */}
-          <p className="text-[14px] sm:text-[15px] font-[450] text-[#525B75] leading-[1.55] max-w-2xl">
-            Recurring problems reported by communities across Jharkhand that may become university innovation challenges. Review the evidence and decide whether your university should take this forward.
+          <p className="text-xs text-slate-500 font-medium max-w-2xl">
+            Review incoming societal problems, verify their relevance, and decide how they should move through the SamadhanSetu ecosystem.
           </p>
-        </header>
+        </div>
 
-        {/* ==================================================
-            2. QUIET SUMMARY STRIP (STRONG NUMBERS & MUTED LABELS)
-            ================================================== */}
-        <section className="flex flex-wrap items-center gap-y-1 gap-x-4 text-[13px] text-[#525B75] font-[450] py-1">
-          <div className="flex items-center gap-1.5">
-            <span className="font-[650] text-[#171A5A] text-[19px]">{String(totalAwaiting).padStart(2, '0')}</span>
-            <span>awaiting validation</span>
-          </div>
-          <span className="text-slate-300">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-[650] text-[#171A5A] text-[19px]">08</span>
-            <span>validated challenges</span>
-          </div>
-          <span className="text-slate-300">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-[650] text-[#171A5A] text-[19px]">12</span>
-            <span>student teams</span>
-          </div>
-          <span className="text-slate-300">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-[650] text-[#171A5A] text-[19px]">05</span>
-            <span>active projects</span>
-          </div>
-        </section>
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+          <span className="px-3 py-1 bg-amber-50 text-amber-800 font-semibold border border-amber-200 rounded-full text-xs flex items-center gap-1.5 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            [{awaitingReviewCount || 24}] Awaiting Review
+          </span>
+        </div>
+      </div>
 
-        {/* ==================================================
-            3. DISCOVERY CONTROLS (DEEP NAVY FILTER TYPOGRAPHY)
-            ================================================== */}
-        <section className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
-          {/* Primary Search Input */}
+      {/* 2. SEARCH & FILTER TOOLBAR */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          {/* Search Input */}
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-base pointer-events-none">
               search
             </span>
             <input
               type="text"
-              placeholder="Search community problems..."
-              className="w-full pl-9 pr-3 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-medium text-[#171A5A] placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition-colors"
+              placeholder="Search by problem title, report ID, location..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#26205F] transition-colors"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Filter Dropdowns Toolbar */}
-          <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          {/* Filter Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {/* Priority Filter */}
             <select
-              className="px-2.5 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-medium text-[#171A5A] focus:outline-none focus:border-indigo-600 cursor-pointer transition-colors"
-              value={domainFilter}
-              onChange={(e) => setDomainFilter(e.target.value)}
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#26205F] cursor-pointer"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
             >
-              <option value="ALL">All domains</option>
-              <option value="WATER">Water & Sanitation</option>
-              <option value="AGRICULTURE">Agriculture</option>
-              <option value="HEALTHCARE">Healthcare</option>
-              <option value="INFRASTRUCTURE">Infrastructure</option>
+              <option value="ALL">All Priorities</option>
+              <option value="HIGH">High Priority (≥8.0)</option>
+              <option value="MEDIUM">Medium Priority (5.0-7.9)</option>
+              <option value="STANDARD">Standard Priority (&lt;5.0)</option>
             </select>
 
+            {/* Status Filter */}
             <select
-              className="px-2.5 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-medium text-[#171A5A] focus:outline-none focus:border-indigo-600 cursor-pointer transition-colors"
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#26205F] cursor-pointer"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending Review</option>
+              <option value="VERIFIED">Verified</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+
+            {/* District Filter */}
+            <select
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#26205F] cursor-pointer"
               value={districtFilter}
               onChange={(e) => setDistrictFilter(e.target.value)}
             >
-              <option value="ALL">All districts</option>
+              <option value="ALL">All Districts</option>
               <option value="Gumla">Gumla</option>
               <option value="Simdega">Simdega</option>
               <option value="Khunti">Khunti</option>
               <option value="Ranchi">Ranchi</option>
             </select>
 
+            {/* Domain Filter */}
             <select
-              className="px-2.5 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-medium text-[#171A5A] focus:outline-none focus:border-indigo-600 cursor-pointer transition-colors"
-              value={impactFilter}
-              onChange={(e) => setImpactFilter(e.target.value)}
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#26205F] cursor-pointer"
+              value={domainFilter}
+              onChange={(e) => setDomainFilter(e.target.value)}
             >
-              <option value="ALL">Impact</option>
-              <option value="HIGH">High Impact</option>
-              <option value="MEDIUM-HIGH">Medium-High</option>
+              <option value="ALL">All Domains</option>
+              <option value="WATER">Water &amp; Sanitation</option>
+              <option value="AGRICULTURE">Agriculture</option>
+              <option value="HEALTHCARE">Public Health</option>
+              <option value="INFRASTRUCTURE">Infrastructure</option>
             </select>
 
+            {/* Sorting Dropdown */}
             <select
-              className="px-2.5 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-medium text-[#171A5A] focus:outline-none focus:border-indigo-600 cursor-pointer transition-colors"
-              value={fitFilter}
-              onChange={(e) => setFitFilter(e.target.value)}
-            >
-              <option value="ALL">University fit</option>
-              <option value="90+">90%+ fit</option>
-              <option value="80+">80%+ fit</option>
-            </select>
-
-            <select
-              className="px-2.5 py-1.5 bg-white rounded-md border border-stone-200 text-[13px] font-semibold text-[#171A5A] focus:outline-none focus:border-indigo-600 cursor-pointer transition-colors"
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#26205F] cursor-pointer"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="RELEVANCE">Highest relevance</option>
-              <option value="IMPACT">Highest impact</option>
-              <option value="FIT">Highest university fit</option>
-              <option value="SIGNALS">Most signals</option>
+              <option value="NEWEST">Newest First</option>
+              <option value="OLDEST">Oldest First</option>
+              <option value="PRIORITY">Highest Priority</option>
+              <option value="SIGNALS">Largest Signal Count</option>
             </select>
 
-            {(searchQuery || domainFilter !== 'ALL' || districtFilter !== 'ALL' || impactFilter !== 'ALL' || signalFilter !== 'ALL' || fitFilter !== 'ALL') && (
+            {(searchQuery || priorityFilter !== 'ALL' || statusFilter !== 'ALL' || districtFilter !== 'ALL' || domainFilter !== 'ALL' || sortBy !== 'NEWEST') && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('')
-                  setDomainFilter('ALL')
+                  setPriorityFilter('ALL')
+                  setStatusFilter('ALL')
                   setDistrictFilter('ALL')
-                  setImpactFilter('ALL')
-                  setSignalFilter('ALL')
-                  setFitFilter('ALL')
-                  setSortBy('RELEVANCE')
+                  setDomainFilter('ALL')
+                  setSortBy('NEWEST')
                 }}
-                className="text-[13px] font-medium text-indigo-700 hover:text-indigo-900 px-1 shrink-0 cursor-pointer underline underline-offset-2"
+                className="text-xs font-bold text-[#26205F] hover:underline px-2 cursor-pointer"
               >
-                Reset
+                Reset Filters
               </button>
             )}
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* ==================================================
-            4. EDITORIAL PROBLEM LIST WORKSPACE
-            ================================================== */}
-
-        {/* LOADING STATE */}
-        {loading && (
-          <div className="py-16 text-center space-y-2 border-y border-stone-200/60 my-4">
-            <span className="material-symbols-outlined animate-spin text-xl text-indigo-700">progress_activity</span>
-            <p className="text-[13px] font-medium text-[#525B75]">Loading emerging community problems...</p>
+      {/* 3. MAIN WORKSPACE (2-COLUMN GRID) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: Reports Awaiting Review List (lg:col-span-8) */}
+        <div className="lg:col-span-8 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+            <h2 className="text-sm font-extrabold text-[#26205F] uppercase tracking-wider flex items-center gap-2">
+              <span>Reports Awaiting Review</span>
+              <span className="text-xs text-slate-400 font-mono font-normal">({filteredSubmissions.length} items)</span>
+            </h2>
+            <span className="text-[11px] font-semibold text-slate-500">
+              Showing sorted by {sortBy.toLowerCase()}
+            </span>
           </div>
-        )}
 
-        {/* API ERROR STATE */}
-        {!loading && error && (
-          <div className="p-4 rounded-md border border-amber-200/80 bg-amber-50/50 flex items-center justify-between gap-3 text-[13px]">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-amber-700 text-base">warning</span>
-              <span className="text-slate-800 font-medium">Could not load emerging community patterns right now.</span>
+          {/* LOADING STATE */}
+          {loading && (
+            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+              <span className="material-symbols-outlined animate-spin text-3xl text-[#26205F]">progress_activity</span>
+              <p className="text-xs font-semibold text-slate-500">Loading incoming problem review queue...</p>
             </div>
-            <button
-              type="button"
-              onClick={fetchClusters}
-              className="text-[13px] font-semibold text-indigo-700 hover:text-indigo-900 cursor-pointer underline underline-offset-2 shrink-0"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* EMPTY QUEUE STATE */}
-        {!loading && !error && filteredClusters.length === 0 && (
-          <div className="py-16 text-center space-y-3 border-y border-stone-200/60 my-4">
-            <span className="material-symbols-outlined text-2xl text-emerald-600">task_alt</span>
-            <div className="space-y-1">
-              <h3 className="text-[14px] font-semibold text-[#171A5A]">No matching community problems found</h3>
-              <p className="text-[13px] text-[#525B75] max-w-sm mx-auto">
-                Try adjusting your search query or filters to discover available opportunities.
+          {/* ERROR STATE */}
+          {!loading && error && (
+            <div className="p-5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 flex items-center justify-between">
+              <span className="font-medium">{error}</span>
+              <button
+                type="button"
+                onClick={fetchQueueData}
+                className="font-bold underline text-[#26205F] hover:text-purple-900 cursor-pointer"
+              >
+                Retry Loading
+              </button>
+            </div>
+          )}
+
+          {/* EMPTY QUEUE / NO RESULTS STATE */}
+          {!loading && !error && filteredSubmissions.length === 0 && (
+            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+              <span className="material-symbols-outlined text-4xl text-emerald-600">task_alt</span>
+              <h3 className="text-base font-bold text-slate-900">No reports awaiting review</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                All submitted citizen problems have been reviewed, or no reports match your active filter criteria.
               </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* EDITORIAL PROBLEM CARDS WORKSPACE */}
-        {!loading && !error && filteredClusters.length > 0 && (
-          <div className="space-y-3.5 pt-2">
-            {filteredClusters.map((item, idx) => {
-              const signalsCount = item.problem_count || item.members?.length || 32
-              const fitScore = item.match_score || item.emergence_score || 94
-              const impact = item.impact_level || (item.avg_severity > 8 ? 'HIGH IMPACT' : 'MEDIUM-HIGH IMPACT')
-              const district = item.district || (item.locations || [])[0] || 'Gumla'
-              const blocksText = item.blocks || '3 blocks · 12 villages'
-              const disciplinesText = (item.recommended_disciplines || ['Environmental Engineering', 'Water Resources', 'IoT Sensor Research']).join(' · ')
-              const explanationText = item.why_this_matters || item.description || `Recurring observations across ${district} indicate a possible regional water-quality pattern.`
-              const isFirst = idx === 0
+          {/* INCOMING PROBLEM ITEMS LIST */}
+          {!loading && !error && filteredSubmissions.length > 0 && (
+            <div className="space-y-3">
+              {filteredSubmissions.map((sub) => {
+                const sev = sub.severity_score || 5.0
+                const isHigh = sev >= 8.0
+                const isMedium = sev >= 5.0 && sev < 8.0
+                const isVerified = (sub.status || '').toUpperCase() === 'VERIFIED'
 
-              return (
-                <article
-                  key={item.id}
-                  onClick={() => handleReviewProblem(item)}
-                  className={`bg-white rounded-xl p-5 sm:p-6 shadow-[0_2px_10px_rgba(20,24,80,0.04)] transition-all duration-150 cursor-pointer group hover:-translate-y-[1.5px] ${
-                    isFirst
-                      ? 'border border-[rgba(70,55,200,0.18)] hover:border-[rgba(70,55,200,0.30)]'
-                      : 'border border-[rgba(20,24,80,0.10)] hover:border-[rgba(20,24,80,0.22)]'
-                  }`}
-                >
-                  <div className="space-y-2">
-                    {/* Domain Header Line */}
-                    <div className="text-[11px] font-[650] text-[#171A5A] uppercase tracking-[0.06em]">
-                      {item.primary_domain || 'WATER & SANITATION'}
-                    </div>
+                // Restrained status colors
+                const statusBadgeStyle = isVerified
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : isHigh
+                  ? 'bg-rose-50 text-rose-800 border-rose-200'
+                  : isMedium
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : 'bg-slate-100 text-slate-700 border-slate-200'
 
-                    {/* Problem Title & Action Link */}
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <h2 className="text-[22px] sm:text-[24px] font-[650] text-[#171A5A] group-hover:text-indigo-800 transition-colors leading-[1.25] tracking-[-0.01em]">
-                        {item.title || item.name}
-                      </h2>
+                const statusText = isVerified
+                  ? 'VERIFIED'
+                  : isHigh
+                  ? 'HIGH PRIORITY'
+                  : isMedium
+                  ? 'MEDIUM PRIORITY'
+                  : 'STANDARD REVIEW'
 
-                      {/* Action Link */}
-                      <span className="text-[13px] sm:text-[14px] font-semibold text-[#171A5A] group-hover:text-indigo-800 inline-flex items-center gap-1 shrink-0 pt-1 sm:pt-0">
-                        <span>Review problem</span>
-                        <span className="text-sm transition-transform duration-150 group-hover:translate-x-[3px]">→</span>
+                const formattedDate = sub.created_at
+                  ? new Date(sub.created_at).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : 'Recent'
+
+                return (
+                  <div
+                    key={sub.id}
+                    className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-purple-300 transition-all space-y-3"
+                  >
+                    {/* Top Row: Badges & ID */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusBadgeStyle}`}>
+                          {statusText} ({sev.toFixed(1)}/10)
+                        </span>
+                        <span className="text-[11px] font-mono font-semibold text-[#26205F]">
+                          {sub.ref_id || `SS-${sub.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-xs text-slate-500 font-medium">Submitted {formattedDate}</span>
+                      </div>
+
+                      <span className="text-[10px] font-bold text-[#26205F] bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200/60 uppercase">
+                        {sub.primary_domain || 'WATER & SANITATION'}
                       </span>
                     </div>
 
-                    {/* Location / Metadata */}
-                    <div className="text-[13px] font-[450] text-[#525B75]">
-                      {district} · {blocksText}
+                    {/* Middle Title & Description */}
+                    <div className="space-y-1">
+                      <h3 className="text-base font-bold text-[#26205F] leading-snug">
+                        {sub.ai_summary || sub.raw_text || 'Community Societal Problem Submission'}
+                      </h3>
+                      {sub.raw_text && sub.ai_summary && sub.raw_text !== sub.ai_summary && (
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          "{sub.raw_text}"
+                        </p>
+                      )}
                     </div>
 
-                    {/* Community Signals / Impact / Fit */}
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-slate-600 pt-0.5">
-                      <span className="font-normal text-slate-600">{signalsCount} community reports</span>
-                      <span className="text-slate-300">·</span>
-                      <span className="font-bold text-[#171A5A]">
-                        {impact.toUpperCase()}
+                    {/* Location & Metadata Row */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium pt-1">
+                      <span className="flex items-center gap-1 text-slate-700">
+                        <span className="material-symbols-outlined text-sm text-[#26205F]">location_on</span>
+                        <span>{sub.district || 'Gumla'}, {sub.state || 'Jharkhand'}</span>
                       </span>
-                      <span className="text-slate-300">·</span>
-                      <span className="font-bold text-[#171A5A]">
-                        {fitScore}% university fit
+
+                      {sub.submission_channel && (
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <span className="material-symbols-outlined text-sm">
+                            {sub.submission_channel === 'voice' ? 'mic' : 'notes'}
+                          </span>
+                          <span className="capitalize">{sub.submission_channel} report</span>
+                        </span>
+                      )}
+
+                      {sub.similar_count > 0 && (
+                        <span className="flex items-center gap-1 text-purple-800 font-semibold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
+                          <span className="material-symbols-outlined text-sm">hub</span>
+                          <span>{sub.similar_count} Similar Reports</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Bottom Actions Row */}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-medium text-slate-500">
+                        AI Model: <strong className="text-slate-700 font-mono">{sub.ai_model || 'gemini-2.0-flash'}</strong>
                       </span>
-                    </div>
 
-                    {/* Disciplines */}
-                    <div className="text-[12px] sm:text-[13px] font-[450] text-[#64748B]">
-                      {disciplinesText}
-                    </div>
+                      <div className="flex items-center gap-2">
+                        {/* ONLY show "View cluster" when a real cluster ID exists */}
+                        {sub.cluster_id && (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/admin/clusters')}
+                            className="border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                          >
+                            View cluster
+                          </button>
+                        )}
 
-                    {/* AI / Insight Quote */}
-                    <p className="text-[13px] font-normal italic text-[#525B75] leading-relaxed pt-1 max-w-3xl">
-                      &ldquo;{explanationText}&rdquo;
-                    </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/admin/submissions/${sub.id}/review`)}
+                          className="bg-[#26205F] text-white hover:bg-purple-900 px-4 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Review &rarr;</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-      </main>
+        {/* RIGHT COLUMN: Review Insights Panel (lg:col-span-4) */}
+        <div className="lg:col-span-4 space-y-4 sticky top-24">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+            <div className="border-b border-slate-100 pb-2.5">
+              <h3 className="text-xs font-bold text-[#26205F] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-base text-purple-600">insights</span>
+                Review Insights
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                Derived real-time intelligence from active community submissions
+              </p>
+            </div>
+
+            {/* Insight Card 1: Emerging Attention */}
+            <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                <span className="flex items-center gap-1 text-rose-800">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                  Emerging Attention
+                </span>
+                <span className="font-mono text-rose-800 font-bold">{highPriorityCount} Reports</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                {totalSubmissions > 0
+                  ? `${Math.round((highPriorityCount / totalSubmissions) * 100)}% of incoming reports require urgent administrative evaluation due to severe impact.`
+                  : 'High priority reports flagged for immediate review.'}
+              </p>
+            </div>
+
+            {/* Insight Card 2: Duplicate / Cluster Detection */}
+            <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                <span className="flex items-center gap-1 text-purple-900">
+                  <span className="material-symbols-outlined text-sm text-purple-600">auto_awesome</span>
+                  Duplicate Detection
+                </span>
+                <span className="font-mono text-purple-900 font-bold">{clusteredCount} Matched</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                AI embeddings have associated {clusteredCount} submissions with existing community pattern clusters.
+              </p>
+            </div>
+
+            {/* Insight Card 3: Top District Activity */}
+            <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-[#26205F]">
+                <span>District Activity Breakdown</span>
+                <span className="text-[10px] text-slate-400 font-normal">By volume</span>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                {topDistricts.length > 0 ? (
+                  topDistricts.map(([districtName, count]) => {
+                    const pct = Math.round((count / (totalSubmissions || 1)) * 100)
+                    return (
+                      <div key={districtName} className="space-y-0.5">
+                        <div className="flex justify-between text-[11px] font-medium text-slate-700">
+                          <span>{districtName} District</span>
+                          <span className="font-mono font-bold text-[#26205F]">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#26205F] rounded-full"
+                            style={{ width: `${pct}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-[11px] text-slate-500 italic">No district data available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Insight Card 4: Queue Velocity & Status Breakdown */}
+            <div className="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100 space-y-2">
+              <span className="text-[10px] font-bold text-[#26205F] uppercase tracking-wider block">
+                QUEUE STATUS SUMMARY
+              </span>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-white p-2 rounded-lg border border-purple-100">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">PENDING</span>
+                  <span className="font-extrabold text-amber-700 font-mono">{awaitingReviewCount}</span>
+                </div>
+                <div className="bg-white p-2 rounded-lg border border-purple-100">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">VERIFIED</span>
+                  <span className="font-extrabold text-emerald-700 font-mono">{verifiedCount}</span>
+                </div>
+                <div className="bg-white p-2 rounded-lg border border-purple-100">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">REJECTED</span>
+                  <span className="font-extrabold text-slate-600 font-mono">{rejectedCount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
+
 
 

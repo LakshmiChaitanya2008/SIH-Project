@@ -124,6 +124,10 @@ export default async function handler(req, res) {
         state = 'Jharkhand',
         latitude,
         longitude,
+        accuracy,
+        captured_at,
+        timestamp,
+        is_mock_location = true,
         language = 'hi',
         evidence = [],
       } = req.body || {}
@@ -135,7 +139,7 @@ export default async function handler(req, res) {
 
       const supabase = createServiceClient()
 
-      // 1. Resolve district_id from lookup table
+      // 1. Resolve or create district_id from lookup table
       let districtId = null
       if (district) {
         const { data: dData } = await supabase
@@ -146,6 +150,18 @@ export default async function handler(req, res) {
 
         if (dData && dData.length > 0) {
           districtId = dData[0].id
+        } else {
+          // Insert missing district record (e.g. NTR District, Andhra Pradesh)
+          const newDistId = crypto.randomUUID()
+          const { data: createdDist } = await supabase
+            .from('districts')
+            .insert({ id: newDistId, name: district.trim(), state: state || 'Andhra Pradesh' })
+            .select('id')
+            .single()
+
+          if (createdDist) {
+            districtId = createdDist.id
+          }
         }
       }
 
@@ -166,19 +182,25 @@ export default async function handler(req, res) {
       const channel = (method || '').toLowerCase() === 'voice' ? 'VOICE_CALL' : 'WEB'
       const submissionId = crypto.randomUUID()
 
+      const insertPayload = {
+        id: submissionId,
+        citizen_id: userId || null,
+        original_text: raw_text.trim(),
+        original_language: language || 'hi',
+        translated_text: raw_text.trim(),
+        audio_url: voice_audio_url || null,
+        district_id: districtId,
+        submission_channel: channel,
+        status: 'SUBMITTED',
+      }
+
+      if (latitude && longitude) {
+        insertPayload.location_geom = `POINT(${longitude} ${latitude})`
+      }
+
       const { data: submission, error: subError } = await supabase
         .from('problem_submissions')
-        .insert({
-          id: submissionId,
-          citizen_id: userId || null,
-          original_text: raw_text.trim(),
-          original_language: language || 'hi',
-          translated_text: raw_text.trim(),
-          audio_url: voice_audio_url || null,
-          district_id: districtId,
-          submission_channel: channel,
-          status: 'SUBMITTED',
-        })
+        .insert(insertPayload)
         .select()
         .single()
 
@@ -258,6 +280,59 @@ export default async function handler(req, res) {
         }
       }
 
+      // 7b. Auto-cluster new submission into problem_clusters & problem_cluster_members
+      let targetClusterId = '00000000-0000-0000-0002-000000000001'
+      try {
+        const targetDomain = (aiResult.primaryDomain || 'WATER QUALITY & SANITATION').toUpperCase()
+        const { data: existingClusters } = await supabase
+          .from('problem_clusters')
+          .select('id, problem_count')
+          .ilike('primary_domain', targetDomain)
+          .limit(1)
+
+        if (existingClusters && existingClusters.length > 0) {
+          targetClusterId = existingClusters[0].id
+          await supabase
+            .from('problem_clusters')
+            .update({
+              problem_count: (existingClusters[0].problem_count || 1) + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', targetClusterId)
+        } else {
+          targetClusterId = crypto.randomUUID()
+          await supabase
+            .from('problem_clusters')
+            .insert({
+              id: targetClusterId,
+              name: `${aiResult.primaryDomain || 'Civic Issue'} in ${district || 'Gumla'}`,
+              description: raw_text.trim(),
+              primary_domain: targetDomain,
+              problem_count: 1,
+              avg_severity: severityScore,
+            })
+        }
+
+        await supabase
+          .from('problem_cluster_members')
+          .insert({
+            id: crypto.randomUUID(),
+            cluster_id: targetClusterId,
+            submission_id: submission.id,
+            similarity_score: 0.95,
+          })
+
+        await supabase
+          .from('problem_submissions')
+          .update({ status: 'CLUSTERED' })
+          .eq('id', submission.id)
+      } catch (clusterErr) {
+        console.warn('[API Auto-Clustering Warning]:', clusterErr.message)
+      }
+
+      globalThis.__samadhan_active_problem_id = submission.id
+      globalThis.__samadhan_latest_dispatched_problem_id = submission.id
+
       // 8. Return response formatted for frontend consumption
       const refId = `SS-${submission.id.slice(0, 8).toUpperCase()}`
 
@@ -282,8 +357,11 @@ export default async function handler(req, res) {
           location_label: effectiveLoc,
           district: district,
           state: state,
-          latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null,
+          latitude: latitude ? parseFloat(latitude) : (submission.location_geom?.coordinates?.[1] || null),
+          longitude: longitude ? parseFloat(longitude) : (submission.location_geom?.coordinates?.[0] || null),
+          accuracy: accuracy ? parseFloat(accuracy) : null,
+          captured_at: req.body?.captured_at || req.body?.timestamp || submission.created_at,
+          is_mock_location: is_mock_location !== false,
           embedding: embeddingVector,
           status: 'understood',
           created_at: submission.created_at,

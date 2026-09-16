@@ -53,19 +53,36 @@ export default function CitizenEvidenceView() {
       }
 
       const fileId = `ev_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
       const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'document';
 
       evidenceStore.addFile(fileId, file);
 
-      dispatch(addEvidence({
-        id: fileId,
-        name: file.name,
-        size: file.size,
-        type,
-        previewUrl,
-        caption: '',
-      }));
+      // Read as Data URL (base64) so image preview persists reliably everywhere
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Url = event.target.result;
+          dispatch(addEvidence({
+            id: fileId,
+            name: file.name,
+            size: file.size,
+            type,
+            previewUrl: base64Url,
+            caption: '',
+          }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const fallbackUrl = URL.createObjectURL(file);
+        dispatch(addEvidence({
+          id: fileId,
+          name: file.name,
+          size: file.size,
+          type,
+          previewUrl: fallbackUrl,
+          caption: '',
+        }));
+      }
     }
 
     e.target.value = '';
@@ -172,7 +189,7 @@ export default function CitizenEvidenceView() {
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept="image/jpeg,image/png,image/webp,.pdf,.doc,.docx"
+            accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx"
             multiple
             onChange={handleFileChange}
           />
@@ -229,12 +246,12 @@ export default function CitizenEvidenceView() {
 
           </div>
 
-          {/* Evidence Files Area (Inline Empty State vs Uploaded File Cards) */}
+          {/* Evidence Files Area (Uploaded Photo Cards) */}
           <div className="space-y-2">
             {evidenceList.length > 0 ? (
               evidenceList.map((item, idx) => (
                 <div key={item.id || idx} className="p-3 rounded-xl border border-outline-variant/60 bg-white flex items-center gap-3 justify-between shadow-2xs">
-                  <div className="w-10 h-10 rounded-lg bg-surface-container-low border border-outline-variant/40 flex items-center justify-center text-brand-indigo shrink-0 overflow-hidden">
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-low border border-outline-variant/40 flex items-center justify-center text-brand-indigo shrink-0 overflow-hidden">
                     {item.previewUrl ? (
                       <img src={item.previewUrl} className="w-full h-full object-cover" alt={item.name} />
                     ) : (
